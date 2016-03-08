@@ -1,6 +1,9 @@
 Common Sense Separated Values (CSSV)            Version 0.1 (2016-03-08)
 ====================================
 
+(See https://github.com/jstimpfle/relational-calculus for a simple
+application of CSSV)
+
 CSSV fulfills the need for a plain text format for relational databases
 that is human friendly and unambiguous, and specifies canonical
 representations. A database notated as CSSV could look like:
