@@ -1,0 +1,113 @@
+Common Sense Separated Values (CSSV)            Version 0.1 (2016-03-08)
+====================================
+
+CSSV fulfills the need for a plain text format for relational databases
+that is human friendly and unambiguous, and specifies canonical
+representations. A database notated as CSSV could look like:
+
+# Person database example, version 1
+% constraint unique person P *
+% constraint foreign couple P * => person P *
+% constraint foreign couple * P => person P *
+% constraint foreign affair P * => person P *
+% constraint foreign affair * P => person P *
+person jack male "Jack of all Trades"
+person john male "John Doe"
+person jane female "Jane Dane"
+affair jack jane
+couple john jane
+
+CSSV encourages normalization and emphasizes the practical properties of
+plain text, particularly ease of manual editing and version-ability with
+plain text VCS's. This is accomplished by omitting NULL values and
+column names, which in turn encourages schemas with fewer columns.
+
+"Plain text" in this document is understood as a succession of 8-bit
+bytes that fall predominantly in the ASCII printable range. UTF-8
+encoded Unicode is implicitly supported by allowing bytes in the range
+0x80-0xff. But for ease of implementation and locale-independency, CSSV
+is specified at the byte level.
+
+With the exception of tabs, newline and carriage return characters,
+ASCII control characters are not allowed. More precisely, CSSV databases
+consist only of the following bytes: 0x09, 0x0a, 0x0d, 0x20-0x7e,
+0x80-0xff.
+
+LEXICAL SYNTAX
+==============
+
+CSSV databases are encoded as single files / streams, where database
+rows are separated by newline (0x0a) characters. Mac and Windows line
+endings are also supported, but discouraged.
+
+Each row is given on a single line (extinct of newline and carriage
+return characters) as a list of tokens which are separated by one or
+more tab (0x09) or space (0x20) characters. There are two types of
+tokens: atoms and string literals.
+
+Atoms start with any character except double quote (") and end at the
+first following space (0x20) character or at the end of the line. By
+nature of their representation not all byte sequences are atoms (for
+example, atoms can't contain spaces). Atoms are meant mostly for use as
+numbers and identifiers, and often serve as foreign or unique keys in
+relations.
+
+String literals start with a double quote (") character and end at the
+first following un-escaped double quote character. The bytes between the
+quotes are ASCII print characters, including space (0x20-0x7e). By means
+of escaping they can represent arbitrary data (and so they are meant for
+accompanying data, like comments, notes, binary data...). Escaping is
+C-style: the backslash character introduces an escape sequence. The
+following escape sequences and interpretations as (binary) data are
+possible.
+
+Escape sequence | Interpretation
+--------------------------------
+\\              | backslash (0x5c)
+\"              | double quote (0x22)
+\n              | newline (0x0a)
+\r              | carriage return (0x0d)
+\t              | horizontal tab (0x09)
+\xHH            | Byte in (lower case) hexadecimal notation 
+
+Hexadecimal notation is required for the representation of ASCII control
+characters, and is encouraged for the notation of "binary data", for
+example obscure Unicode character (sequences) which are not contained in
+most fonts. Notation of ASCII print range bytes in hexadecimal form is
+also supported for "binary data" which is not interpreted as characters.
+In the interest of normalization it is discouraged otherwise.
+
+DATABASE NOTATION
+=================
+
+A database is represented as a list of rows, themselves represented as
+lists of tokens encoded as specified above. Each row is notated such
+that it starts with the name of the table to which it belongs, followed
+by the values (columns) of the row (tuple). Table names must match the
+regular expression [a-zA-Z][a-zA-Z0-9_-]* and upper case characters are
+discouraged.
+
+Regarding the values which can occur in a row: It's beyond the scope of
+this document to specify all possible representations or interpretations
+of values that are needed in practical applications. But of course every
+column in a well behaved database contains values only of a single
+"type". Moreover the syntactic distinction of atoms and string literals
+implies also a semantic (type-level) distinction, i.e. the values of a
+given column should either all be atoms, or all be string literals. For
+example, the following example
+
+person john "John Doe"
+person "jane" "Jane Dane"
+
+is invalid since the first column of the relation `person` contains the
+atom `john` and the string literal `"jane"`.
+
+The rows in a CSSV database should be grouped by the tables to which
+they belong, and the rows in each group should be sorted lexically
+(which also implies grouping by every prefix of their columns).
+
+DATABASE INTEGRITY / SCHEMA NOTATION
+====================================
+
+To be specified. Integrity constraints will be introduced by a percent
+(%) character.
