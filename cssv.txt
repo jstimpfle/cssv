@@ -1,65 +1,69 @@
-Common Sense Separated Values (CSSV)            Version 0.1 (2016-03-08)
+Common Sense Separated Values (CSSV)
 ====================================
 
 (See https://github.com/jstimpfle/relational-calculus for a simple
 application of CSSV)
 
-CSSV fulfills the need for a plain text format for relational databases
-that is human friendly and unambiguous, and specifies canonical
-representations. A database notated as CSSV could look like:
+CSSV is a human friendly plain text format for relational databases. A
+database notated as CSSV could look like:
 
-# Person database example, version 1
-% constraint unique person P *
-% constraint foreign couple P * => person P *
-% constraint foreign couple * P => person P *
-% constraint foreign affair P * => person P *
-% constraint foreign affair * P => person P *
-person jack male "Jack of all Trades"
-person john male "John Doe"
-person jane female "Jane Dane"
-affair jack jane
-couple john jane
+Person Jack male "Jack of all Trades"
+Person John male "John Doe"
+Person Jane female "Jane Dane"
+Affair Jack Jane
+Couple John Jane
 
 CSSV encourages normalization and emphasizes the practical properties of
-plain text, particularly ease of manual editing and version-ability with
-plain text VCS's. This is accomplished by omitting NULL values and
-column names, which in turn encourages schemas with fewer columns.
+plain text -- in particular ease of editing and trackability with plain
+text VCS's. NULL values and column names are omitted to encourage tables
+with fewer columns but more relational meaning.
 
-"Plain text" in this document is understood as a succession of 8-bit
-bytes that fall predominantly in the ASCII printable range. UTF-8
-encoded Unicode is implicitly supported by allowing bytes in the range
-0x80-0xff. But for ease of implementation and locale-independency, CSSV
-is specified at the byte level.
+"Plain text" in this document is understood as succession of 8-bit bytes
+that fall predominantly in the ASCII printable range. UTF-8 encoded
+Unicode is implicitly supported by allowing bytes in the range
+0x80-0xff. But for clarity, data portability (locale independency), and
+ease of implementation, CSSV is specified solely at the byte level.
 
 With the exception of tabs, newline and carriage return characters,
 ASCII control characters are not allowed. More precisely, CSSV databases
 consist only of the following bytes: 0x09, 0x0a, 0x0d, 0x20-0x7e,
 0x80-0xff.
 
-LEXICAL SYNTAX
-==============
+SYNTAX
+======
 
-CSSV databases are encoded as single files / streams, where database
-rows are separated by newline (0x0a) characters. Mac and Windows line
-endings are also supported, but discouraged.
+CSSV databases are embedded in a single file or stream, and consist of a
+database header (relational schema) and the tabular data (table rows).
 
-Each row is given on a single line (extinct of newline and carriage
-return characters) as a list of tokens which are separated by one or
-more tab (0x09) or space (0x20) characters. There are two types of
-tokens: atoms and string literals.
+The database header comes first. Each line of the header must be
+prefixed with a '%' (0x25) character. The header, whith the leading '%'
+characters stripped away, is given in the schema language discussed
+later.
 
-Atoms start with any character except double quote (") and end at the
-first following space (0x20) character or at the end of the line. By
-nature of their representation not all byte sequences are atoms (for
-example, atoms can't contain spaces). Atoms are meant mostly for use as
-numbers and identifiers, and often serve as foreign or unique keys in
-relations.
+After the header, each row of the data is given on a single line
+(extinct of newline and carriage return characters) as a sequence of
+tokens which are separated by one or more tab (0x09) or space (0x20)
+characters.
 
-String literals start with a double quote (") character and end at the
-first following un-escaped double quote character. The bytes between the
-quotes are ASCII print characters, including space (0x20-0x7e). By means
-of escaping they can represent arbitrary data (and so they are meant for
-accompanying data, like comments, notes, binary data...). Escaping is
+The first token is always the name of the table to which the row
+belongs. (table names must be valid C identifiers).
+
+The remaining tokens are the values of the row (in order), i.e. there
+should be as many remaining tokens as there are columns to the table.
+Syntactically, each of these remaining tokens is either an *atom* or a
+*string literal*.
+
+Atoms consist only of ASCII print characters. An Atom begins with any
+character except double quote (0x22) and ends at the first following
+space (0x20) or tab (0x09) character or at the end of the line. Atoms
+are useful as numbers and identifiers, and often serve as keys in
+relations. But they can be used for almost anything which does not
+contain whitespace. For example, URLs, dates, times...
+
+String literals start with a double quote (0x22) character and end at
+the first following un-escaped double quote character. By means of
+escaping they can represent arbitrary data (and so they are meant for
+accompanying data, like comments, notes, binary data...).  Escaping is
 C-style: the backslash character introduces an escape sequence. The
 following escape sequences and interpretations as (binary) data are
 possible.
@@ -71,46 +75,111 @@ Escape sequence | Interpretation
 \n              | newline (0x0a)
 \r              | carriage return (0x0d)
 \t              | horizontal tab (0x09)
-\xHH            | Byte in (lower case) hexadecimal notation 
+\xHH            | Byte in (lower case) hexadecimal notation
 
 Hexadecimal notation is required for the representation of ASCII control
-characters, and is encouraged for the notation of "binary data", for
-example obscure Unicode character (sequences) which are not contained in
-most fonts. Notation of ASCII print range bytes in hexadecimal form is
-also supported for "binary data" which is not interpreted as characters.
-In the interest of normalization it is discouraged otherwise.
+characters (which are not allowed anywhere in the file), and is
+encouraged for example for obscure Unicode characters which are not
+contained in most fonts. It's also supported for ASCII print range bytes
+in opaque binary data (i.e., if the data is not interpreted as
+characters). In the interest of normalization it is discouraged
+otherwise.
 
-DATABASE NOTATION
-=================
+DATABASE SCHEMA LANGUAGE
+========================
 
-A database is represented as a list of rows, themselves represented as
-lists of tokens encoded as specified above. Each row is notated such
-that it starts with the name of the table to which it belongs, followed
-by the values (columns) of the row (tuple). Table names must match the
-regular expression [a-zA-Z][a-zA-Z0-9_-]* and upper case characters are
-discouraged.
+The schema language supports declaration of user-defined domains
+("column data types"), base tables, and database integrity constraints
+(primary and foreign keys). These are the most essential ingredients to
+relational databases. The following is an example of a schema in CSSV.
+The lines are prefixed with '%' as required for database inline
+notation.
 
-Regarding the values which can occur in a row: It's beyond the scope of
-this document to specify all possible representations or interpretations
-of values that are needed in practical applications. But of course every
-column in a well behaved database contains values only of a single
-"type". Moreover the syntactic distinction of atoms and string literals
-implies also a semantic (type-level) distinction, i.e. the values of a
-given column should either all be atoms, or all be string literals. For
-example, the following example
+%% Create new types "User", "Gender", "Domain"
+%
+% DESCRIPTION registered user
+% DOMAIN User Atom match \a(2)\d(2-4)
+%
+% DESCRIPTION gender of a user
+% DOMAIN Gender Enum ( male female )
+%
+% DESCRIPTION free-form comment
+% DOMAIN Comment String
+%
+%% Create tables "Person" (3 cols), "Affair" (2 cols), "Couple" (2 cols)
+%
+% DESCRIPTION This table is meant to store all persons
+% TABLE Person User Gender Comment
+%
+% TABLE Affair User User
+%
+% TABLE Couple User User
+%
+%% For relational integrity: primary and foreign keys
+%
+% UNIQ (Person P *)
+% DEP (Couple P *) => (Person P *)
+% DEP (Couple * P) => (Person P *)
+% DEP (Affair P *) => (Person P *)
+% DEP (Affair * P) => (Person P *)
+%
 
-person john "John Doe"
-person "jane" "Jane Dane"
+Explanation of this language follows.
 
-is invalid since the first column of the relation `person` contains the
-atom `john` and the string literal `"jane"`.
+TYPE SYSTEM
+-----------
 
-The rows in a CSSV database should be grouped by the tables to which
-they belong, and the rows in each group should be sorted lexically
-(which also implies grouping by every prefix of their columns).
+A DOMAIN line introduces the creation of a new domain ("column data
+type"). The new domain's values will be distinct from all other domains'
+values.
 
-DATABASE INTEGRITY / SCHEMA NOTATION
-====================================
+The first following token is the name of the new datatype. It must match
+the regular expression [a-zA-Z][a-zA-Z0-9]*.
 
-To be specified. Integrity constraints will be introduced by a percent
-(%) character.
+The next token is the name of a basic datatype to build on. For the rest
+of the line a parser/lexer which comes with that basic datatype takes
+over, and parses additional constraints or parameters for the formation
+of the new type. The basic datatypes specify how values are represented
+internally, and externally within the syntactic constraints specified
+for atoms and string literals. Furthermore each basic datatype must
+define a total ordering on all its values.
+
+At least an "Atom" and a "String" datatype must be provided by the
+implementation which correspond to atom and string literal tokens. Their
+orderings must be the (ASCII) lexical ordering.
+
+Furthermore support of an "Enum" and an "Int" datatype (machine integer
+or BigInt) is strongly recommended. This is important for performance
+and for correct sort order.
+
+TODO: specify type constraint language for these four datatypes
+precisely.
+
+Type constraint language for "Atom":
+         match <pattern>
+Example:
+
+DOMAIN Foo Atom match \w(2)\d(2..4)   # atoms like ab315 or xy1004
+DOMAIN Foo Atom                       # arbitrary atoms
+
+Type constraint language for "String":
+	length(<integer>? .. <integer>?)
+Examples:
+
+DOMAIN Foo String length(3..16)  # strings of length 3 to 16
+DOMAIN Bar String length(..16)   # strings of length up to 16
+DOMAIN Baz String length(16..)   # strings of length at least 16
+DOMAIN Boo String                # arbitrary strings
+
+Type constraint language for "Enum":
+       ( <identifier...> )
+Example:
+
+DOMAIN Color Enum ( yellow magenta cyan black )
+
+Type constraint language for Int:
+        range(<integer>? .. <integer>?)
+Examples:
+
+DOMAIN Foo Int range(0..)      # non-negative integers
+DOMAIN Bar Int range(-1..127)  # only values from -1 to 127
