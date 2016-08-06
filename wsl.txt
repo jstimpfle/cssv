@@ -1,96 +1,91 @@
 Whitespace separated literals (WSL)
 ===================================
 
-(See https://github.com/jstimpfle/relational-calculus for a simple
-application of WSL)
-
-WSL is a human friendly plain text format for relational databases. A
-database notated as WSL might look like the following:
+WSL is a human and programmer friendly text serialization format for
+relational databases. Here is an example of a Databases notated as WSL:
 
 % DOMAIN Person Atom
 % DOMAIN PersonDesc String
 % DOMAIN Gender Enum male female
-%
+
 % TABLE Person Person Gender PersonDesc
 % TABLE Friends Person Person
 % TABLE Couple Person Person
-%
+
 Person Jack male "Jack of all Trades"
 Person John male "John Doe"
 Person Jane female "Jane Dane"
 Friends Jack Jane
 Couple John Jane
 
-WSL encourages normalization and emphasizes the practical properties of
-plain text -- in particular ease of editing and version-controlling.
-NULL values and column names are omitted to encourage tables with fewer
-columns but more relational meaning.
+WSL emphasizes normalization and the practical properties of plain text;
+in particular ease of editing and version-controlling. Storage-wise, it
+aims to offer canonical data representations. Modelling-wise, NULL
+values and column names are omitted from its conception of the
+relational model to encourage tables with fewer columns and better
+semantics.
 
 SYNTAX
 ======
 
-WSL is a plain text format for relational databases.
+A convenient way to represent Unicode is needed for practical reasons.
+WSL databases must be UTF-8 encoded; no other encodings are supported.
+http://utf8everywhere.org gives many good reasons for UTF-8 only. The
+most important benefit is that syntactical specification needs only be
+concerned with ASCII-range bytes.
 
-"Plain text" here means mostly ASCII and optionally UTF-8. The control
-character bytes 0x00-0x1f, 0x7f are completely forbidden, except 0x09
-(tab) and 0x0a (newline) which are allowed as lexical separators.
+A WSL database is normally embedded in a single file or stream of bytes.
+The control character bytes 0x00-0x1f, 0x7f are forbidden, with the
+exception of 0x0a (newline) which is used as lexical separator. In
+particular, 0x09 (tab) and 0x0d (cr) are not supported.
 
-A WSL database is normally embedded in a single file or stream, and
-contains a header followed by the relational data.
-
-Each line of the header must be prefixed with a '%' (0x25) character.
-The header holds the schema of database, which is given in the schema
-language discussed later.
+The stream consists of a header followed by the relational data. The
+header holds the database schema. Each non-empty line of the header must
+be prefixed with a '%' (0x25) character. The schema language is
+discussed later.
 
 After the header, each row of the data is given on a single line
-(extinct of newline and carriage return characters) as a sequence of
-tokens which are separated by one or more tab (0x09) or space (0x20)
-characters.
+(extinct of newline characters) as a sequence of tokens which are
+separated by exactly one space (0x20) character.
 
-The first token is always the name of the table to which the row
-belongs. (table names must be valid C identifiers).
+The first such token is always the name of the table to which the row
+belongs.
 
-The remaining tokens are the values of the row (in order), i.e. there
-should be as many tokens following the table name as there are columns
-in the table. Syntactically, each of these remaining tokens is either an
-*atom* or a *string literal*.
+The remaining tokens are the values of the row (in order corresponding
+to the columns of the table). Each token is encoded as an *atom* or as a
+*string*, according to its column's syntactic type, which may be of
+either atom or string type.
 
-An atom is a sequence of bytes from the ASCII graphical range except
-double quote, i.e. 0x21, 0x23-0x7e. Optionally implementations can
-support UTF-8 as long as single-byte sequences are only 0x21, 0x23-0x7e.
+An atom is simply a sequence of allowed bytes except whitespace, i.e.
+0x21-0x7e, 0x80-0xff. Note that it's actually a little more restricted
+than that due to the fact that the file has to be a valid UTF-8 stream.
+Also, it's a bad idea to use for example Unicode whitespace characters
+other than U+0020 (space); but due to the complexities of Unicode this
+can't be avoided by design.
+
 Atoms are useful for numbers and identifiers, and often serve as keys in
 relations. But they can be used for almost anything which does not
-contain whitespace. For example, URLs, dates, times...
+contain space characters. For example, URLs, dates, times...
 
 A string literal starts with a double quote (0x22) character and ends at
-the first following un-escaped double quote character. By means of
+the first following unescaped double quote character. By means of
 escaping string literals can represent arbitrary data (and so they are
-meant for accompanying data, like comments, notes, binary data...).
-Escaping is C-style: the backslash character introduces an escape
-sequence. The following escape sequences and interpretations as (binary)
-data are possible:
+meant for accompanying data like comments). Escaping is C-style: the
+backslash character introduces an escape sequence. The following escape
+sequences and interpretations as (binary) data are possible:
 
 Escape sequence | Interpretation
 --------------------------------
-\\              | backslash (0x5c)
-\"              | double quote (0x22)
+\t              | horizontal tab (0x09)
 \n              | newline (0x0a)
 \r              | carriage return (0x0d)
-\t              | horizontal tab (0x09)
+\"              | double quote (0x22)
+\\              | backslash (0x5c)
 \xHH            | Byte in (lower case) hexadecimal notation
 
 Hexadecimal notation is required for the representation of ASCII control
-characters (which are not allowed anywhere in the file). It's also
-generally encouraged for binary data (i.e., if the data is not
-interpreted as characters). In the interest of normalization it is
-discouraged otherwise.
-
-Of course implementations might do additional interpretation to extend
-the interpretation of string literals specified here, given additional
-type information. But the above syntactical restrictions define a
-maximal set of allowed sequences (for example, "\ESC" is not a valid
-string literal) and also what strings must be interpreted as equal (for
-example, "\x20" and " ").
+characters other than \t, \n and \r. In the interest of normalization it
+is discouraged otherwise.
 
 DATABASE SCHEMA LANGUAGE
 ========================
@@ -161,8 +156,8 @@ how values of a domain are represented internally, and externally within
 the syntactic constraints for atoms and string literals. Furthermore
 each basic datatype defines a total ordering on all its values.
 
-There might be additional tokens following. For example, the "Enum"
-basic datatype expects one more token for each valid value.
+There might be additional tokens following. For example, to make an
+"Enum" datatype one more token for each valid value is needed.
 
 The following datatypes must be built in to every implementation:
 
@@ -175,11 +170,7 @@ Other useful types:
 
  - Decimal (Atom syntax, Configurable number of decimal places)
  - Base64 (Atom syntax, base64-encoded binary data)
-
-The most important point of making a distinction between types other
-than atom or string literal syntax is to enable the implementations of
-special functions (for example, round :: Decimal -> Integer) and to get
-sorting right.
+ - Hex (Atom syntax, hex-encoded binary data)
 
 DOMAIN CONSTRAINTS
 ------------------
@@ -190,16 +181,15 @@ how this should be realized.
 
 The idea is that such constraints can be specified separatedly to the
 declaration of each domain, and possibly on the external (instead of
-only internal) representation, and are not mandatory for all
-implementations to support. This allows specialized syntax for
+only internal) representation. This allows specialized syntax for
 fine-grained constraints that can be enforced by specialized tools.
 
 UNIQUE KEY CONSTRAINTS
 ----------------------
 
 A unique key constraint is declared by a line starting with KEY. After
-the KEY token, the name of a table, and one more token for each column
-in the table, are expected. Each column token should be either "*" or an
+the KEY token, the name of a table and one more token for each column in
+the table are expected. Each column token should be either "*" or an
 uppercase identifier. All identifiers in a unique key declaration line
 must be distinct. The interpretation is that those columns which are
 paired with identifiers (i.e. not "*") form the unique key. For example,
