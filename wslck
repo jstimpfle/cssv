@@ -21,15 +21,15 @@ class L1:
     def __iter__(self):
         return self
 
-def u8(bin):
+def u(bin):
     try:
         return bin.decode('utf-8')
     except UnicodeDecodeError:
         s = bin.decode('utf-8', 'backslashreplace')
         raise Exception('Not valid UTF-8: "%s"' % (s,))
 
-def u8j(bins):
-    return ' '.join(u8(bin) for bin in bins)
+def uj(bins):
+    return ' '.join(u(bin) for bin in bins)
 
 def BinaryLines(buf):
     for line in buf.readlines():
@@ -55,7 +55,7 @@ def parse_atom_datatype(line):
             return token
         @staticmethod
         def encode(value):
-            return token
+            return value
     return AtomDatatype
 
 def parse_string_datatype(line):
@@ -68,7 +68,11 @@ def parse_string_datatype(line):
             return token
         @staticmethod
         def encode(value):
-            return token
+            # XXX some escaping missing
+            value = value.replace(b'\\',b'\\\\')
+            value = value.replace(b'"',b'\\"')
+            value = b'"' + value + b'"'
+            return value
     return StringDatatype
 
 def parse_integer_datatype(line):
@@ -81,7 +85,7 @@ def parse_integer_datatype(line):
             try:
                 return int(token)
             except ValueError:
-                raise Exception('Failed to parse %s as integer' %(u8(token),))
+                raise Exception('Failed to parse %s as integer' %(u(token),))
         @staticmethod
         def encode(value):
             return bytes(str(value), 'utf-8')
@@ -94,7 +98,7 @@ def parse_enum_datatype(line):
         @staticmethod
         def decode(token):
             if token not in values:
-                raise Exception('invalid token "%s"; valid tokens are %s' %(u8(token), u8j(values)))
+                raise Exception('invalid token "%s"; valid tokens are %s' %(u(token), uj(values)))
             return token
         @staticmethod
         def encode(value):
@@ -109,8 +113,8 @@ default_parsers = (
 )
 
 class Schema:
-    def __init__(self, tableinfo, keys, refs):
-        self.tableinfo = tableinfo  # { name: columns }
+    def __init__(self, tinfo, keys, refs):
+        self.tinfo = tinfo  # { name: columns }
         self.keys = keys  # { name: (table, column indices) }
         self.refs = refs  # { name: (table, column indices, table, column indices) }
 
@@ -123,7 +127,7 @@ class Database:
         self.relvar = {}  # { name: set() }
         self.key_index = {}  # { name: set() }
         self.ref_index = {}  # { name: index of key in foreign table }
-        for name in schema.tableinfo:
+        for name in schema.tinfo:
             self.relvar[name] = set()
         for name in schema.keys:
             self.key_index[name] = set()
@@ -131,11 +135,11 @@ class Database:
             self.ref_index[name] = set()
 
     def add_row(self, table, row):
-        if table not in self.schema.tableinfo:
+        if table not in self.schema.tinfo:
             raise Exception('No such table: %s' %(table,))
         t = self.relvar[table]
-        if len(row) != len(self.schema.tableinfo[table]):
-            raise Exception('Can\'t add row %s to table %s: wrong arity' %(u8(row), u8(table)))
+        if len(row) != len(self.schema.tinfo[table]):
+            raise Exception('Can\'t add row %s to table %s: wrong arity' %(u(row), u(table)))
         if row in t:
             raise Exception('Duplicate row %s' %(row,))
         t.add(row)
@@ -144,7 +148,7 @@ class Database:
                 k = key_from_row(row, ix)
                 ux = self.key_index[name]
                 if k in ux:
-                    raise Exception('Unique constraint "%s" violated by row %s %s' %(u8(name), u8(ut), u8j(row)))
+                    raise Exception('Unique constraint "%s" violated by row %s %s' %(u(name), u(ut), uj(row)))
                 ux.add(k)
         for name, (_, _, ft, fix) in self.schema.refs.items():
             if ft == table:
@@ -158,17 +162,23 @@ class Database:
                 k = key_from_row(row, lix)
                 fx = self.ref_index[name]
                 if k not in fx:
-                    raise Exception('Foreign key constraint "%s" violated by %s %s"' %(u8(name), u8(lt), u8j(row)))
+                    raise Exception('Foreign key constraint "%s" violated by %s %s"' %(u(name), u(lt), uj(row)))
+
+    def dump(self):
+        for table in self.relvar:
+            cols = self.schema.tinfo[table]
+            for row in sorted(self.relvar[table]):
+                yield format_row(table, row, cols)
 
 def parse_datatype(line, parser):
     ws = line.split(None, 1)
     if ws:
         name, rest = ws[0], ws[1] if len(ws) == 2 else b''
         if name not in parser:
-            raise Exception('No parser for datatype "%s" available while parsing DOMAIN declaration' %(u8(name,)))
+            raise Exception('No parser for datatype "%s" available while parsing DOMAIN declaration' %(u(name,)))
         datatype = parser[name](rest)
         return datatype
-    raise Exception('Failed to parse %s as datatype declaration' %(u8(line),))
+    raise Exception('Failed to parse %s as datatype declaration' %(u(line),))
 
 def parse_domain(line, parsers):
     ws = line.split(None, 1)
@@ -176,7 +186,7 @@ def parse_domain(line, parsers):
         name, rest = ws[0], ws[1] if len(ws) == 2 else b''
         datatype = parse_datatype(rest, parsers)
         return name, datatype
-    raise Exception('Could not parse "%s" as DOMAIN declaration' %(u8(b' '.join(ws))))
+    raise Exception('Could not parse "%s" as DOMAIN declaration' %(u(b' '.join(ws))))
 
 def parse_table(line):
     ws = line.split()
@@ -197,7 +207,7 @@ def parse_ref(line):
     line = line.strip()
     parts = line.split(b'=>')
     if len(parts) != 2:
-        raise Exception('Failed to parse "%s" as REFERENCE constraint' %(u8(line),))
+        raise Exception('Failed to parse "%s" as REFERENCE constraint' %(u(line),))
     ld, fd = parts[0].strip(), parts[1].strip()
     name = line  # XXX
     lt, lvs = parse_logic_tuple(ld)
@@ -223,7 +233,7 @@ def parse_schema(lines, parsers=None):
         if decl == b'TABLE':
             name, tdoms = parse_table(rest)
             if name in tables:
-                raise Exception('Table "%s" already declared' %(u8(name),))
+                raise Exception('Table "%s" already declared' %(u(name),))
             tables[name] = tdoms
         if decl == b'KEY':
             name, key = parse_key(line[4:])
@@ -236,20 +246,20 @@ def parse_schema(lines, parsers=None):
     for table, tdoms in tables.items():
         for dom in tdoms:
             if dom not in doms:
-                raise Exception('Declaration of table "%s" references unknown domain "%s"' %(u8(table), u8(dom)))
+                raise Exception('Declaration of table "%s" references unknown domain "%s"' %(u(table), u(dom)))
         schtables[table] = tuple(doms[dom] for dom in tdoms)
 
     schkeys = {}
     for name, (table, vars) in keys.items():
         ix = []
         if table not in tables:
-            raise Exception('No such table: "%s" while parsing KEY constraint "%s"' %(u8(name), u8(name)))
+            raise Exception('No such table: "%s" while parsing KEY constraint "%s"' %(u(name), u(name)))
         if len(vars) != len(tables[table]):
-            raise Exception('Arity mismatch for table "%s" while parsing KEY constraint "%s"' %(u8(name), u8(name)))
+            raise Exception('Arity mismatch for table "%s" while parsing KEY constraint "%s"' %(u(name), u(name)))
         for i, v in enumerate(vars):
             if v != b'*':
                 if not v.isalpha():
-                    raise Exception('Invalid variable "%s" while parsing "%s" as logic tuple' %(u8(v), u8(name)))
+                    raise Exception('Invalid variable "%s" while parsing "%s" as logic tuple' %(u(v), u(name)))
                 ix.append(i)
         schkeys[name] = table, ix
 
@@ -258,13 +268,13 @@ def parse_schema(lines, parsers=None):
         lix, fix = [], []
         for (table, vars, ix) in [(lt,lvs,lix), (ft,fvs,fix)]:
             if table not in tables:
-                raise Exception('No such table: "%s" while parsing REFERENCE constraint "%s"' %(u8(table), u8(name)))
+                raise Exception('No such table: "%s" while parsing REFERENCE constraint "%s"' %(u(table), u(name)))
             if len(vars) != len(tables[table]):
-                raise Exception('Arity mismatch for table "%s" while parsing KEY constraint "%s"' %(u8(table), u8(name)))
+                raise Exception('Arity mismatch for table "%s" while parsing KEY constraint "%s"' %(u(table), u(name)))
             for i, v in enumerate(vars):
                 if v != b'*':
                     if not v.isalpha():
-                        raise Exception('Invalid variable "%s" while parsing "%s" as logic tuple' %(u8(table), u8(name)))
+                        raise Exception('Invalid variable "%s" while parsing "%s" as logic tuple' %(u(table), u(name)))
                     ix.append(i)
         schrefs[name] = lt, lix, ft, fix
 
@@ -284,7 +294,7 @@ def parse_atom(line, i):
     while i < end and line[i] > 0x20 and line[i] != 0x7f:
         i += 1
     if x == i:
-        raise Exception('EOL or invalid character while expecting atom at byte %d in line "%s"' %(i, u8(line)))
+        raise Exception('EOL or invalid character while expecting atom at byte %d in line "%s"' %(i, u(line)))
     return line[x:i], i
 
 def parse_string(line, i):
@@ -297,7 +307,7 @@ def parse_string(line, i):
             return bytes(s), i+1
         if line[i] == 0x5c:
             if end - i < 2 or (line[i+1] == 'x' and end - i < 4):
-                raise Exception('Failed to parse escape sequence at byte %d in line %s' %(i, u8(line)))
+                raise Exception('Failed to parse escape sequence at byte %d in line %s' %(i, u(line)))
             m = { 0x22: 0x22, 0x5c: 0x5c, 0x6e: 0x0a, 0x72: 0x0d, 0x74: 0x09 }
             if line[i+1] in m:
                 s.append(m[line[i+1]])
@@ -306,40 +316,53 @@ def parse_string(line, i):
                 hi = hexconvert(line[i+2])
                 lo = hexconvert(line[i+3])
                 if hi is None or lo is None:
-                    raise Exception('Failed to convert hex sequence at byte %d in line %s' %(i, u8(line)))
+                    raise Exception('Failed to convert hex sequence at byte %d in line %s' %(i, u(line)))
                 s.append(hi*16 + lo)
                 i += 4
             else:
-                raise Exception('Failed to convert escape sequence at byte %d in line %s' %(i, u8(line)))
+                raise Exception('Failed to convert escape sequence at byte %d in line %s' %(i, u(line)))
         elif line[i] >= 0x20 and line[i] != 0x7f:
             s.append(line[i])
             i += 1
         else:
-            raise Exception('Failed to parse string literal at byte %d in line %s' %(i, u8(line)))
+            raise Exception('Failed to parse string literal at byte %d in line %s' %(i, u(line)))
 
 def parse_space(line, i):
     end = len(line)
     if i == end:
-        raise Exception('Expected whitespace but found EOL in line %s' %(u8(line),))
+        raise Exception('Expected whitespace but found EOL in line %s' %(u(line),))
     if line[i] != 0x20:
-        raise Exception('Expected whitespace in line %s at position %d' %(u8(line), i))
+        raise Exception('Expected whitespace in line %s at position %d' %(u(line), i))
     return i+1
 
-def parse_row(line, schema):
+def parse_cols(line, i, tdesc):
     end = len(line)
-    i = 0
-    cs = tuple()
-    t, i = parse_atom(line, 0)
-    for col in schema.tableinfo[t]:
+    cs = []
+    for col in tdesc:
         i = parse_space(line, i)
         if col.syntaxtype == SYNTAX_ATOM:
             s, i = parse_atom(line, i)
         else:
             s, i = parse_string(line, i)
-        cs = cs + (col.decode(s),)
+        cs.append(col.decode(s))
     if i != end:
-        raise Exception('Unexpected trailing characters at byte %d in line %s' %(i, u8(line)))
-    return t, cs
+        raise Exception('Expected EOL at byte %d in line %s' %(i, u(line)))
+    return tuple(cs)
+
+def parse_row(line, tinfo):
+    end = len(line)
+    i = 0
+    table, i = parse_atom(line, 0)
+    tdesc = tinfo.get(table)
+    if tdesc is None:
+        raise Exception('No such table: "%s" while parsing line: %s' %(u(table), u(line)))
+    return table, parse_cols(line, i, tdesc)
+
+def format_row(table, row, cols):
+    x = [table]
+    for cell, col in zip(row, cols):
+        x.append(col.encode(cell))
+    return b' '.join(x) + b'\n'
 
 def split_schema(lines):
     lines = L1(iter(lines))
@@ -363,7 +386,7 @@ def parse_db(lines, schema=None):
         line = line.strip()
         if not line:
             continue
-        table, row = parse_row(line, schema)
+        table, row = parse_row(line, schema.tinfo)
         db.add_row(table, row)
     return db
 
@@ -374,3 +397,5 @@ if __name__ == '__main__':
     db = parse_db(lines)
     db.check_referential_integrity()
     #print(db.relvar)
+    for line in db.dump():
+        sys.stdout.buffer.write(line)
