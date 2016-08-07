@@ -68,10 +68,6 @@ def parse_string_datatype(line):
             return token
         @staticmethod
         def encode(value):
-            # XXX some escaping missing
-            value = value.replace(b'\\',b'\\\\')
-            value = value.replace(b'"',b'\\"')
-            value = b'"' + value + b'"'
             return value
     return StringDatatype
 
@@ -217,6 +213,8 @@ def parse_ref(line):
 def parse_schema(lines, parsers=None):
     if parsers is None:
         parsers = dict(default_parsers)
+    else:
+        parsers = dict(parsers)
     doms = {}
     tables = {}
     keys = {}
@@ -358,10 +356,25 @@ def parse_row(line, tinfo):
         raise Exception('No such table: "%s" while parsing line: %s' %(u(table), u(line)))
     return table, parse_cols(line, i, tdesc)
 
+def format_atom(token):
+    return token
+
+def format_string(token):
+    x = token
+    # XXX some escaping missing
+    x = x.replace(b'\\',b'\\\\')
+    x = x.replace(b'"',b'\\"')
+    x = b'"' + x + b'"'
+    return x
+
 def format_row(table, row, cols):
     x = [table]
-    for cell, col in zip(row, cols):
-        x.append(col.encode(cell))
+    for val, col in zip(row, cols):
+        token = col.encode(val)
+        if col.syntaxtype == SYNTAX_ATOM:
+            x.append(format_atom(token))
+        else:
+            x.append(format_string(token))
     return b' '.join(x) + b'\n'
 
 def split_schema(lines):
@@ -377,10 +390,10 @@ def split_schema(lines):
         schlines.append(line.lstrip(b'% '))
     return schlines, lines
 
-def parse_db(lines, schema=None):
+def parse_db(lines, schema=None, parsers=None):
     if schema is None:
         schemalines, lines = split_schema(lines)
-        schema = parse_schema(schemalines)
+        schema = parse_schema(schemalines, parsers)
     db = Database(schema)
     for line in lines:
         line = line.strip()
@@ -396,6 +409,5 @@ if __name__ == '__main__':
     lines = BinaryLines(sys.stdin)
     db = parse_db(lines)
     db.check_referential_integrity()
-    #print(db.relvar)
     for line in db.dump():
         sys.stdout.buffer.write(line)
