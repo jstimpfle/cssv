@@ -297,7 +297,8 @@ def parse_atom(line, i):
 
 def parse_string(line, i):
     end = len(line)
-    assert line[i] == 0x22
+    if i == end or line[i] != 0x22:
+        raise Exception('Did not found expected string at byte %d in line %s' %(i, u(line)))
     i += 1
     s = []
     while i < end:
