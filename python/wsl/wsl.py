@@ -31,10 +31,11 @@ def uj(bins):
     return ' '.join(u(bin) for bin in bins)
 
 class Schema:
-    def __init__(self, tinfo, keys, refs):
-        self.tinfo = tinfo  # { name: columns }
-        self.keys = keys  # { name: (table, column indices) }
-        self.refs = refs  # { name: (table, column indices, table, column indices) }
+    def __init__(self, coldescs, cols, keys, refs):
+        self.coldescs = coldescs  # { tablename: [(colname, colspec)] }
+        self.cols = cols  # { tablename: [column] }
+        self.keys = keys  # { keyname: (table, [column index]) }
+        self.refs = refs  # { refname: (table, [column index], table, [column index]) }
 
 def key_from_row(row, ix):
     return tuple(row[i] for i in ix)
@@ -45,7 +46,7 @@ class Database:
         self.relvar = {}  # { name: set() }
         self.key_index = {}  # { name: set() }
         self.ref_index = {}  # { name: index of key in foreign table }
-        for name in schema.tinfo:
+        for name in schema.cols:
             self.relvar[name] = set()
         for name in schema.keys:
             self.key_index[name] = set()
@@ -53,11 +54,11 @@ class Database:
             self.ref_index[name] = set()
 
     def add_row(self, table, row):
-        if table not in self.schema.tinfo:
+        if table not in self.relvar:
             raise Exception('No such table: %s' %(table,))
-        t = self.relvar[table]
-        if len(row) != len(self.schema.tinfo[table]):
+        if len(row) != len(self.schema.cols[table]):
             raise Exception('Can\'t add row %s to table %s: wrong arity' %(u(row), u(table)))
+        t = self.relvar[table]
         if row in t:
             raise Exception('Duplicate row %s' %(row,))
         t.add(row)
@@ -83,8 +84,9 @@ class Database:
                     raise Exception('Foreign key constraint "%s" violated by %s %s"' %(u(name), u(lt), uj(row)))
 
     def dump(self):
-        for table in self.relvar:
-            cols = self.schema.tinfo[table]
+        tables = sorted(self.relvar.keys())
+        for table in tables:
+            cols = self.schema.cols[table]
             for row in sorted(self.relvar[table]):
                 yield format_row(table, row, cols)
 
@@ -151,7 +153,7 @@ def parse_schema(lines, datatypes=None):
         decl, rest = ws
         if decl == b'DOMAIN':
             name, dom = parse_domain(rest, datatypes)
-            doms[name] = dom
+            doms[name] = rest, dom
         if decl == b'TABLE':
             name, tdoms = parse_table(rest)
             if name in tables:
@@ -164,12 +166,21 @@ def parse_schema(lines, datatypes=None):
             name, ref = parse_ref(line[9:])
             refs[name] = ref
 
-    schtables = {}
     for table, tdoms in tables.items():
         for dom in tdoms:
             if dom not in doms:
                 raise Exception('Declaration of table "%s" references unknown domain "%s"' %(u(table), u(dom)))
-        schtables[table] = tuple(doms[dom] for dom in tdoms)
+
+    schdescs = {}
+    schtables = {}
+
+    for table, tdoms in tables.items():
+        schdescs[table] = []
+        schtables[table] = []
+        for dom in tdoms:
+            spec, col = doms[dom]
+            schdescs[table].append((dom, spec))
+            schtables[table].append(col)
 
     schkeys = {}
     for name, (table, vars) in keys.items():
@@ -187,7 +198,7 @@ def parse_schema(lines, datatypes=None):
 
     schrefs = {}
     for name, (lt, lvs, ft, fvs) in refs.items():
-        lix, fix = [], []
+        lix, fix = {}, {}
         for (table, vars, ix) in [(lt,lvs,lix), (ft,fvs,fix)]:
             if table not in tables:
                 raise Exception('No such table: "%s" while parsing REFERENCE constraint "%s"' %(u(table), u(name)))
@@ -196,11 +207,17 @@ def parse_schema(lines, datatypes=None):
             for i, v in enumerate(vars):
                 if v != b'*':
                     if not v.isalpha():
-                        raise Exception('Invalid variable "%s" while parsing "%s" as logic tuple' %(u(table), u(name)))
-                    ix.append(i)
-        schrefs[name] = lt, lix, ft, fix
+                        raise Exception('Invalid variable "%s" while REFERENCE constraint "%s"' %(u(v), u(name)))
+                    if v in ix:
+                        raise Exception('Variable "%s" used twice on the same side while parsing REFERENCE constraint "%s"' %(u(v), u(name)))
+                    ix[v] = i
+        if sorted(lix.keys()) != sorted(fix.keys()):
+            raise Exception('Different variables used on both sides of "=>" while parsing REFERENCE constraint "%s"' %(u(name),))
+        ll = [i for _, i in sorted(lix.items())]
+        ff = [i for _, i in sorted(fix.items())]
+        schrefs[name] = lt, ll, ft, ff
 
-    return Schema(schtables, schkeys, schrefs)
+    return Schema(schdescs, schtables, schkeys, schrefs)
 
 def hexconvert(c):
     x = ord(c)
@@ -258,10 +275,10 @@ def parse_space(line, i):
         raise Exception('Expected whitespace in line %s at position %d' %(u(line), i))
     return i+1
 
-def parse_cols(line, i, tdesc):
+def parse_cells(line, i, cols):
     end = len(line)
     cs = []
-    for col in tdesc:
+    for col in cols:
         i = parse_space(line, i)
         if col.syntaxtype == SYNTAX_ATOM:
             s, i = parse_atom(line, i)
@@ -272,14 +289,14 @@ def parse_cols(line, i, tdesc):
         raise Exception('Expected EOL at byte %d in line %s' %(i, u(line)))
     return tuple(cs)
 
-def parse_row(line, tinfo):
+def parse_row(line, cols):
     end = len(line)
     i = 0
     table, i = parse_atom(line, 0)
-    tdesc = tinfo.get(table)
-    if tdesc is None:
+    cols = cols.get(table)
+    if cols is None:
         raise Exception('No such table: "%s" while parsing line: %s' %(u(table), u(line)))
-    return table, parse_cols(line, i, tdesc)
+    return table, parse_cells(line, i, cols)
 
 def format_atom(token):
     return token
@@ -326,6 +343,6 @@ def parse_db(binary_io, schema=None, datatypes=None):
     for line in dblines:
         line = line.strip()
         if line:
-            table, row = parse_row(line, schema.tinfo)
+            table, row = parse_row(line, schema.cols)
             db.add_row(table, row)
     return db
