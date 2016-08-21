@@ -1,4 +1,3 @@
-
 SYNTAX_ATOM = 0
 SYNTAX_STRING = 1
 
@@ -14,7 +13,7 @@ class Datatype:
 
 def parse_atom_datatype(line):
     if line:
-        raise Exception('Construction of Atom datatype does not receive any arguments')
+        raise Exception('Construction of Atom domain does not receive any arguments')
     class AtomDatatype:
         syntaxtype = SYNTAX_ATOM
         @staticmethod
@@ -27,7 +26,7 @@ def parse_atom_datatype(line):
 
 def parse_string_datatype(line):
     if line:
-        raise Exception('Construction of String datatype does not receive any arguments')
+        raise Exception('Construction of String domain does not receive any arguments')
     class StringDatatype:
         syntaxtype = SYNTAX_STRING
         @staticmethod
@@ -40,7 +39,7 @@ def parse_string_datatype(line):
 
 def parse_integer_datatype(line):
     if line:
-        raise Exception('Construction of Integer datatype does not receive any arguments')
+        raise Exception('Construction of Integer domain does not receive any arguments')
     class IntegerDatatype:
         syntaxtype = SYNTAX_ATOM
         @staticmethod
@@ -74,7 +73,7 @@ def parse_enum_datatype(line):
 
 def parse_ipv4_datatype(line):
     if line.strip():
-        raise Exception('IPv4 datatype doesn\'t take any arguments')
+        raise Exception('IPv4 domain doesn\'t take any arguments')
     class IPv4:
         syntaxtype = SYNTAX_ATOM
         @staticmethod
@@ -95,7 +94,7 @@ def parse_ipv4_datatype(line):
             return bytes('%d.%d.%d.%d' % value, 'ascii')
     return IPv4
 
-default_datatypes = (
+default_datatype_parsers = (
     (b'Atom', parse_atom_datatype),
     (b'String', parse_string_datatype),
     (b'Enum', parse_enum_datatype),

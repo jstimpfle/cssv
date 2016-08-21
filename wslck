@@ -1,7 +1,9 @@
 #!/usr/bin/python3
 
 import sys
-import wsl
+import wsl.integrity
+import wsl.parser
+import wsl.schema
 
 if __name__ == '__main__':
     schemafile = None
@@ -13,15 +15,23 @@ if __name__ == '__main__':
     if args:
         raise Exception('Unconsumed arguments:', args)
 
+    ahead = wsl.parser.Ahead(sys.stdin.buffer)
     if schemafile:
         with open(schemafile, 'rb') as f:
-            schemalines = f.readlines()
-        schema = wsl.parse_schema(schemalines)
+            schemastring = f.read()
+        schema = wsl.schema.parse_schema(schemastring)
     else:
-        schema = None
+        hdr = wsl.parser.split_header(ahead)
+        schema = wsl.schema.parse_schema(hdr)
 
-    db = wsl.parse_db(sys.stdin.buffer, schema=schema)
-    db.check_referential_integrity()
-
-    for line in db.dump():
-        sys.stdout.buffer.write(line)
+    datatypes_of_relation = wsl.schema.make_datatypes_of_relation(schema)
+    tuples_of_relation = dict()
+    for relation in schema.relations:
+        tuples_of_relation[relation] = []
+    for line in ahead:
+        line = line.strip()
+        if line:
+            r, tup = wsl.parser.parse_row(line, datatypes_of_relation)
+            tuples_of_relation[r].append(tup)
+    wsl.integrity.check_integrity(schema, tuples_of_relation)
+    print(tuples_of_relation)
