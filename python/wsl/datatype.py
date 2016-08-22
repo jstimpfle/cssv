@@ -2,7 +2,9 @@ SYNTAX_ATOM = 0
 SYNTAX_STRING = 1
 
 class Datatype:
-    "abstract column"
+    """
+    A parsed datatype should have the following members:
+    """
     syntaxtype = None  # SYNTAX_ATOM or SYNTAX_STRING
     @staticmethod
     def decode(token):
@@ -12,6 +14,10 @@ class Datatype:
         pass
 
 def parse_atom_datatype(line):
+    """Parser for Atom datatype declarations
+
+    No special syntax is recognized. Only the bare "Atom" is allowed.
+    """
     if line:
         raise Exception('Construction of Atom domain does not receive any arguments')
     class AtomDatatype:
@@ -50,7 +56,7 @@ def parse_integer_datatype(line):
                 raise Exception('Failed to parse %s as integer' %(u(token),))
         @staticmethod
         def encode(value):
-            return bytes(str(value), 'utf-8')
+            return bytes(str(value), 'ascii')
     return IntegerDatatype
 
 def parse_enum_datatype(line):
@@ -61,7 +67,7 @@ def parse_enum_datatype(line):
         @staticmethod
         def decode(token):
             for pair in pairs:
-                i,v = pair
+                i, v = pair
                 if v == token:
                     return pair
             raise Exception('invalid token "%s"; valid tokens are %s' %(u(token), uj(values)))
@@ -88,7 +94,7 @@ def parse_ipv4_datatype(line):
                     return ip
                 except ValueError:
                     pass
-            raise Exception('Ip must be 4-tuple of 1 byte integers (0-255)')
+            raise Exception('IPv4 address must be 4-tuple of 1 byte integers (0-255)')
         @staticmethod
         def encode(value):
             return bytes('%d.%d.%d.%d' % value, 'ascii')

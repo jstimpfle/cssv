@@ -1,6 +1,5 @@
 import wsl.schema
 
-
 def check_integrity(schema, tuples_of_relation):
 
     def u(bin):
