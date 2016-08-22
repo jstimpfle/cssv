@@ -12,10 +12,12 @@ def uj(bins):
 
 
 class Schema:
-    def __init__(self,
+    def __init__(self, spec,
             domains, relations, keys, references,
             spec_of_relation, spec_of_domain, spec_of_key, spec_of_reference,
             domains_of_relation, datatype_of_domain, tuple_of_key, tuple_of_reference):
+        " original textual specification of schema "
+        self.spec = spec
         " identities given by textual names "
         self.domains = domains  # set ( domain name )
         self.relations = relations  # set ( relation name )
@@ -89,7 +91,7 @@ def parse_reference_decl(line):
     rel2, vs2 = parse_logic_tuple(fd)
     return name, rel1, vs1, rel2, vs2
 
-def parse_schema(schemastring, datatype_parsers=None):
+def parse_schema(schemastring, datatype_parsers):
     if datatype_parsers is None:
         datatype_parsers = dict(default_datatype_parsers)
     else:
@@ -194,13 +196,16 @@ def parse_schema(schemastring, datatype_parsers=None):
         is2 = [i for _, i in sorted(ix2.items())]
         tuple_of_reference[name] = rel1, is1, rel2, is2
 
-    return Schema(domains, relations, keys, references,
+    return Schema(schemastring,
+                  domains, relations, keys, references,
                   spec_of_relation, spec_of_domain, spec_of_key, spec_of_reference,
                   domains_of_relation, datatype_of_domain, tuple_of_key, tuple_of_reference)
 
 def make_datatypes_of_relation(schema):
     return dict((rel, [schema.datatype_of_domain[d] for d in schema.domains_of_relation[rel]]) for rel in schema.relations)
 
+def embed(schemastring):
+    return b''.join(b'% ' + line + b'\n' for line in schemastring.split(b'\n'))
 
 if __name__ == '__main__':
     schemastr = b"""

@@ -1,4 +1,5 @@
-from .datatype import default_datatype_parsers, SYNTAX_ATOM, SYNTAX_STRING
+import wsl.schema
+import wsl.datatype
 
 def u(bin):
     try:
@@ -100,10 +101,12 @@ def parse_values(line, i, datatypes):
     vs = []
     for dt in datatypes:
         i = parse_space(line, i)
-        if dt.syntaxtype == SYNTAX_ATOM:
+        if dt.syntaxtype == wsl.datatype.SYNTAX_ATOM:
             s, i = parse_atom(line, i)
-        else:
+        elif dt.syntaxtype == wsl.datatype.SYNTAX_STRING:
             s, i = parse_string(line, i)
+        else:
+            assert False
         val = dt.decode(s)
         vs.append(val)
     if i != end:
@@ -117,3 +120,22 @@ def parse_row(line, datatypes_of_relation):
     if datatypes is None:
         raise Exception('No such table: "%s" while parsing line: %s' %(u(relation), u(line)))
     return relation, parse_values(line, i, datatypes)
+
+def parse_db(lines, schemastring, datatype_parsers):
+    lookahead = Ahead(lines)
+
+    if schemastring is None:
+        schemastring = split_header(lookahead)
+    schema = wsl.schema.parse_schema(schemastring, datatype_parsers)
+
+    datatypes_of_relation = wsl.schema.make_datatypes_of_relation(schema)
+    tuples_of_relation = dict()
+    for relation in schema.relations:
+        tuples_of_relation[relation] = []
+    for line in lookahead:
+        line = line.strip()
+        if line:
+            r, tup = parse_row(line, datatypes_of_relation)
+            tuples_of_relation[r].append(tup)
+
+    return schema, tuples_of_relation
