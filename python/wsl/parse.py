@@ -1,16 +1,16 @@
+"""wsl.parse: Functionality for parsing the rows of a WSL database given schema
+information.
+"""
+
 import wsl.schema
 import wsl.datatype
-
-"""This module contains functionality to parse the rows of a WSL database
-given schema information.
-"""
 
 def u(bin):
     try:
         return bin.decode('utf-8')
     except UnicodeDecodeError:
         s = bin.decode('utf-8', 'backslashreplace')
-        raise Exception('Not valid UTF-8: "%s"' % (s,))
+        raise Exception('Not valid UTF-8: "%s"' %(s,))
 
 def uj(bins):
     return ' '.join(u(bin) for bin in bins)
@@ -42,6 +42,21 @@ class Ahead:
         return self
 
 def split_header(ahead):
+    """ Given an Ahead buffer, consumes the lines which comprise the inline
+    database header (if any) and returns them as a single bytes-string.
+
+    Args:
+        ahead: An Ahead instance
+
+    Returns:
+        the database header which is comprised of the initial lines starting
+        with a % character.
+
+    Raises:
+        Exception: any exceptions raised from the lines iterator underlying the
+            Ahead are not catched; they bubble up to the caller.
+        
+    """
     schlines = []
     for line in ahead:
         line = line.strip()
@@ -58,13 +73,14 @@ def parse_atom(line, i):
 
     Args:
         line: Input bytes string.
-        i: Index of first character to consume in line.
+        i: Index of the first character to consume in *line*.
 
     Returns:
-        The parsed atom and the index of the first unconsumed index character.
+        A tuple (value, j) which holds the result of the parse and the index of
+        the first unconsumed character in *line*.
 
     Raises:
-        Exception if the parse failed.
+        Exception: if the parse failed.
     """
     end = len(line)
     x = i
@@ -79,13 +95,14 @@ def parse_string(line, i):
 
     Args:
         line: Input bytes string.
-        i: Index of first character to consume in line.
+        i: Index of the first character to consume in *line*.
 
     Returns:
-        The parsed string and the index of the first unconsumed index character.
+        A tuple (value, j) which holds the result of the parse and the index of
+        the first unconsumed character in *line*.
 
     Raises:
-        Exception if the parse failed.
+        Exception: if the parse failed.
     """
     end = len(line)
     if i == end or line[i] != 0x22:
@@ -118,6 +135,18 @@ def parse_string(line, i):
             raise Exception('Failed to parse string literal at byte %d in line %s' %(i, u(line)))
 
 def parse_space(line, i):
+    """Parse a space separating two tokens in a database tuple line.
+
+    This function parses expects precisely one space character, and throws an
+    exception if the space is not found.
+
+    Args:
+        line: A bytes string which holds a line that represents a database tuple.
+        i: An index into the line where the space is supposed to be.
+
+    Returns:
+        If the parse succeed, the index of the next character following the space.
+    """
     end = len(line)
     if i == end or line[i] != 0x20:
         raise Exception('Expected space character in line %s at position %d' %(u(line), i))
@@ -155,7 +184,7 @@ def parse_row(line, datatypes_of_relation):
         tuple holding the parsed values.
 
     Raises:
-        Exception if the parse failed.
+        Exception: if the parse failed.
     """
     end = len(line)
     relation, i = parse_atom(line, 0)
@@ -165,14 +194,15 @@ def parse_row(line, datatypes_of_relation):
     values = parse_values(line, i, datatypes)
     return relation, values
 
-def parse_db(lines, schemastring, datatype_parsers):
+def parse_db(lines, schemastring=None, datatype_parsers=None):
     """Convenience def to parse a WSL database.
 
     Args:
-        lines: Iterable of lines of the database. The lines must by *bytes*
-            objects. *str* strings are not allowed.
+        lines: An iterator over the lines of the database. The lines must be
+            *bytes* objects. *str* strings are not supported.
         schemastring: Optional extern schema specification. If None is given,
-            schemastring is expected to be given inline (with b'% ' prefixes)
+            the schema is expected to be given inline (each line prefixed with
+            *%*)
         datatype_parsers: Optional datatype-declaration parsers for the
             datatypes used in the database. If None is given, only the
             built-in datatypes (wsl.datatype.default_datatype_parsers) are
@@ -184,8 +214,8 @@ def parse_db(lines, schemastring, datatype_parsers):
         of database tuples.
 
     Raises:
-        Exception if the parse failed. Exceptions thrown from the underlying
-        lines iterator also bubble up to the caller.
+        Exception: if the parse failed. Exceptions thrown from the underlying
+            lines iterator also bubble up to the caller.
     """
     lookahead = Ahead(lines)
 
@@ -204,3 +234,26 @@ def parse_db(lines, schemastring, datatype_parsers):
             tuples_of_relation[r].append(tup)
 
     return schema, tuples_of_relation
+
+def parse_db_file(filepath, schemastring=None, datatype_parsers=None):
+    """Convenience def for parsing a WSL database from file in the filesystem.
+
+    This opens the file at *filepath* for reading in binary mode, uses the
+    resulting file handle to construct an appropriate lines iterator, and
+    forwards it and the remaining arguments to *parse_db*.
+
+    Args:
+        filepath: Path to the file that contains the database.
+        schemastring: See *parse_db()*
+        datatype_parsers: See *parse_db()*
+
+    Returns:
+        See *parse_db()*
+
+    Raises:
+        Exception: Exceptions that result from the filesystem I/O while opening
+            or reading the file are not catched; they bubble up to the caller.
+    """
+    with open(filepath, "rb") as f:
+        lines = (line.rstrip(b'\n') for line in f)
+        return parse_db(lines, schemastring, datatype_parsers)

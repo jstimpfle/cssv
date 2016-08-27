@@ -1,0 +1,4 @@
+To generate documentation, use the Sphinx source under doc/. For
+example,
+
+$ make -C doc/ html

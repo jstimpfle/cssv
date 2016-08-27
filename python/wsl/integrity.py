@@ -1,6 +1,18 @@
+"""wsl.integrity: WSL Database Integrity"""
+
 import wsl.schema
 
 def check_integrity(schema, tuples_of_relation):
+    """Check the integrity of a database
+
+    Args:
+        schema: A database schema object
+        tuples_of_relation: A dict which maps each relation name in
+            schema.relations to a list of tuples.
+
+    Returns:
+        A list of all the problems that were found.
+    """
 
     def u(bin):
         try:
@@ -30,15 +42,17 @@ def check_integrity(schema, tuples_of_relation):
     for name in schema.references:
         rel1, ix1, rel2, ix2 = schema.tuple_of_reference[name]
         x = set()
-        data_of[rel2].keys.append((name, ix2, x))
         data_of[rel1].refs.append((name, ix1, x))
+        data_of[rel2].keys.append((name, ix2, x))
+
+    problems = []
     for relation in schema.relations:
         data = data_of[relation]
         for tup in tuples_of_relation[relation]:
             for name, ix, x in data.keys:
                 key = key_from_tup(tup, ix)
                 if key in x:
-                    raise Exception('row %s (%s) violates constraint %s' %(u(relation), uj(tup), u(name)))
+                    problems.append('Row (%s %s)" violates a unique key constraint: %s' %(u(relation), uj(tup), u(name)))
                 x.add(key)
     for relation in schema.relations:
         data = data_of[relation]
@@ -46,4 +60,5 @@ def check_integrity(schema, tuples_of_relation):
             for name, ix, x in data.refs:
                 key = key_from_tup(tup, ix)
                 if key not in x:
-                    raise Exception('row %s (%s) violates constraint %s' %(u(relation), uj(tup), u(name)))
+                    problems.append('Row (%s %s) violates referential integrity: %s' %(u(relation), uj(tup), u(name)))
+    return problems
