@@ -1,10 +1,7 @@
 #!/usr/bin/python3
 
 import sys
-import wsl.parse
-import wsl.format
-import wsl.schema
-import wsl.integrity
+import wsl
 
 if __name__ == '__main__':
     schemafile = None
@@ -24,12 +21,12 @@ if __name__ == '__main__':
         schemastring = None
 
     lines = iter(sys.stdin.buffer)
-    schema, tables = wsl.parse.parse_db(lines, schemastring, datatype_parsers=None)
+    schema, tables = wsl.parse_db(lines, schemastring, datatype_parsers=None)
 
-    problems = wsl.integrity.check_integrity(schema, tables)
+    problems = wsl.check_integrity(schema, tables)
     for x in problems:
         print('Integrity error:', x)
     if len(problems) == 0:
-        txt = wsl.format.format_db(schema, tables, inline_schema=False)
+        txt = wsl.format_db(schema, tables, inline_schema=True)
         sys.stdout.buffer.write(txt)
         sys.stdout.buffer.flush()

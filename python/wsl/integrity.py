@@ -1,17 +1,18 @@
-"""wsl.integrity: WSL Database Integrity"""
+"""Module wsl.integrity: WSL Database Integrity"""
 
 import wsl.schema
 
 def check_integrity(schema, tuples_of_relation):
-    """Check the integrity of a database
+    """Check the integrity of a database.
 
     Args:
-        schema: A database schema object
+        schema: A *wsl.Schema* object
         tuples_of_relation: A dict which maps each relation name in
-            schema.relations to a list of tuples.
+            *schema.relations* to a list of tuples.
 
     Returns:
-        A list of all the problems that were found.
+        A list of all the problems that were found. (If no problems were found
+        an empty list is returned).
     """
 
     def u(bin):

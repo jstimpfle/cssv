@@ -1,9 +1,7 @@
-"""wsl.parse: Functionality for parsing the rows of a WSL database given schema
-information.
-"""
+"""Module wsl.parse: Functionality for parsing the rows of a WSL database given schema
+information."""
 
-import wsl.schema
-import wsl.datatype
+import wsl
 
 def u(bin):
     try:
@@ -15,13 +13,8 @@ def u(bin):
 def uj(bins):
     return ' '.join(u(bin) for bin in bins)
 
-def hexconvert(c):
-    x = ord(c)
-    if 48 <= x < 58:
-        return x - 48
-    if 97 <= x < 103:
-        return 10 + x - 97
-    return None
+def isvariable(v):
+    return len(v) != 0 and v[0:1].isalpha() and v.isalnum()
 
 class Ahead:
     def __init__(self, iter):
@@ -42,7 +35,7 @@ class Ahead:
         return self
 
 def split_header(ahead):
-    """ Given an Ahead buffer, consumes the lines which comprise the inline
+    """Given an *Ahead* buffer, consumes the lines which comprise the inline
     database header (if any) and returns them as a single bytes-string.
 
     Args:
@@ -68,16 +61,190 @@ def split_header(ahead):
     sch = b''.join(l+b'\n' for l in schlines)
     return sch
 
+def parse_domain_decl(name, line, datatype_parsers):
+    """Parse a domain declaration line.
+
+    Args:
+        name: Name for the resulting domain
+        line: Bytes object containing the specification of the datatype.
+        datatype_parsers: dict mapping datatype parser names to datatype parsers.
+
+    Returns:
+        The parsed datatype.
+
+    Raises:
+        Exception: If the parse failed
+    """
+        
+    ws = line.split(None, 1)
+    meta, param = ws[0], ws[1] if len(ws) == 2 else b''
+    parser = datatype_parsers.get(meta)
+    if parser is None:
+        raise wsl.ParseError('Datatype "%s" not available while parsing DOMAIN declaration' %(u(name),))
+    dt = parser(param)
+    return dt
+
+def parse_logic_tuple(line):
+    ws = line.split()
+    return ws[0], ws[1:]
+
+def parse_key_decl(line):
+    """Parse a key constraint declaration.
+
+    Args:
+        line: A bytes object, holding a key declaration (without the
+            leading KEY keyword) on a single line
+
+    Returns:
+        A 3-tuple (name, relation, variables) consisting of an identifying name
+        (currently just the line itself), the relation on which the key
+        constraint is placed, and the variables or * characters split into a list
+    """
+    name = line  # XXX
+    rel, vs = parse_logic_tuple(line)
+    return name, rel, vs
+
+def parse_reference_decl(line):
+    """Parse a reference constraint declaration.
+
+    Args:
+        line: A bytes object, holding a reference declaration (without the leading
+            REFERENCE keyword)
+
+    Returns:
+        a 5-tuple (name, relation1, variables1, relation2, variables2) which
+        consists of an identifying name for the constraint (currently just the line
+        itself), and the local and foreign relation names and variable lists
+    """
+    line = line.strip()
+    parts = line.split(b'=>')
+    if len(parts) != 2:
+        raise wsl.ParseError('Could not parse "%s" as REFERENCE constraint' %(u(line),))
+    ld, fd = parts[0].strip(), parts[1].strip()
+    name = line  # XXX
+    rel1, vs1 = parse_logic_tuple(ld)
+    rel2, vs2 = parse_logic_tuple(fd)
+    return name, rel1, vs1, rel2, vs2
+
+def parse_schema(schemastring, datatype_parsers):
+    if datatype_parsers is None:
+        datatype_parsers = dict(wsl.builtin_datatype_parsers)
+    else:
+        datatype_parsers = dict(datatype_parsers)
+
+    domains = set()
+    relations = set() 
+    keys = set() 
+    references = set() 
+    spec_of_relation = {} 
+    spec_of_domain = {} 
+    spec_of_key = {} 
+    spec_of_reference = {} 
+    domains_of_relation = {} 
+    datatype_of_domain = {} 
+    tuple_of_key = {} 
+    tuple_of_reference = {} 
+
+    for line in schemastring.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        ws = line.split(None, 1)
+        if len(ws) != 2:
+            raise wsl.ParseError('Failed to parse line: %s' %(line,))
+        decl, rest = ws
+        if decl in [b'DOMAIN', b'TABLE']:
+            ws2 = rest.split(None, 1)
+            if len(ws2) != 2:
+                raise wsl.ParseError('Failed to parse line: %s' %(line,))
+            name, rest2 = ws2
+            if decl == b'DOMAIN':
+                if name in domains:
+                    raise wsl.ParseError('Table "%s" already declared' %(u(name),))
+                domains.add(name)
+                spec_of_domain[name] = rest2
+            elif decl == b'TABLE':
+                if name in relations:
+                    raise wsl.ParseError('Table "%s" already declared' %(u(name),))
+                relations.add(name)
+                spec_of_relation[name] = rest2
+        elif decl == b'KEY':
+            name = rest  # XXX
+            keys.add(name)
+            spec_of_key[name] = rest
+        elif decl == b'REFERENCE':
+            name = rest  # XXX
+            references.add(name)
+            spec_of_reference[name] = rest
+        else:
+            pass  # XXX
+
+    for domain in domains:
+        spec = spec_of_domain[domain]
+        e, r = parse_domain_decl(domain, spec, datatype_parsers)
+        if e != wsl.PARSE_OK:
+            raise wsl.ParseError('Failed to parse datatype from %s: %s' %(spec, r or '(unknown reason)'))
+        datatype_of_domain[domain] = r
+    for relation in relations:
+        spec = spec_of_relation[relation]
+        doms = spec.split()
+        for dom in doms:
+            if dom not in doms:
+                raise wsl.ParseError('Declaration of table "%s" references unknown domain "%s"' %(u(relation), u(dom)))
+        domains_of_relation[relation] = doms
+    for key in keys:
+        spec = spec_of_key[key]
+        name, rel, vs = parse_key_decl(spec)
+        ix = []
+        if rel not in relations:
+            raise wsl.ParseError('No such table: "%s" while parsing KEY constraint "%s"' %(u(rel), u(spec)))
+        if len(vs) != len(domains_of_relation[rel]):
+            raise wsl.ParseError('Arity mismatch for table "%s" while parsing KEY constraint "%s"' %(u(rel), u(spec)))
+        for i, v in enumerate(vs):
+            if isvariable(v):
+                if v in ix:
+                    raise wsl.ParseError('Variable "%s" used twice on the same side while parsing REFERENCE constraint "%s"' %(u(v), u(name)))
+                ix.append(i)
+            elif v != b'*':
+                raise wsl.ParseError('Invalid variable "%s" while REFERENCE constraint "%s"' %(u(v), u(name)))
+        tuple_of_key[name] = rel, ix
+    for reference in references:
+        spec = spec_of_reference[reference]
+        name, rel1, vs1, rel2, vs2 = parse_reference_decl(spec)
+        ix1, ix2 = {}, {}
+        for (rel, vs, ix) in [(rel1,vs1,ix1), (rel2,vs2,ix2)]:
+            if rel not in relations:
+                raise wsl.ParseError('No such table: "%s" while parsing REFERENCE constraint "%s"' %(u(rel), u(name)))
+            if len(vs) != len(domains_of_relation[rel]):
+                raise wsl.ParseError('Arity mismatch for table "%s" while parsing KEY constraint "%s"' %(u(rel), u(name)))
+            for i, v in enumerate(vs):
+                if isvariable(v):
+                    if v in ix:
+                        raise wsl.ParseError('Variable "%s" used twice on the same side while parsing REFERENCE constraint "%s"' %(u(v), u(name)))
+                    ix[v] = i
+                elif v != b'*':
+                    raise wsl.ParseError('Invalid variable "%s" while parsing REFERENCE constraint "%s"' %(u(v), u(name)))
+        if sorted(ix1.keys()) != sorted(ix2.keys()):
+            raise wsl.ParseError('Different variables used on both sides of "=>" while parsing REFERENCE constraint "%s"' %(u(name),))
+        is1 = [i for _, i in sorted(ix1.items())]
+        is2 = [i for _, i in sorted(ix2.items())]
+        tuple_of_reference[name] = rel1, is1, rel2, is2
+
+    return wsl.Schema(schemastring,
+         domains, relations, keys, references,
+         spec_of_relation, spec_of_domain, spec_of_key, spec_of_reference,
+         datatype_of_domain, domains_of_relation, tuple_of_key, tuple_of_reference)
+
 def parse_atom(line, i):
-    """Parse an atom literal from line starting from i.
+    """Parse an atom literal from *line* starting from *i*.
 
     Args:
         line: Input bytes string.
         i: Index of the first character to consume in *line*.
 
     Returns:
-        A tuple (value, j) which holds the result of the parse and the index of
-        the first unconsumed character in *line*.
+        A tuple *(value, j)* which holds the result of the parse and the index
+        of the first unconsumed character in *line*.
 
     Raises:
         Exception: if the parse failed.
@@ -87,55 +254,36 @@ def parse_atom(line, i):
     while i < end and line[i] > 0x20 and line[i] != 0x7f:
         i += 1
     if x == i:
-        raise Exception('EOL or invalid character while expecting atom at byte %d in line "%s"' %(i, u(line)))
+        raise wsl.ParseError('EOL or invalid character while expecting atom at byte %d in line "%s"' %(i, u(line)))
     return line[x:i], i
 
 def parse_string(line, i):
-    """Parses a string literal from line starting from i
+    """Parses a string literal from *line* starting from *i*.
 
     Args:
         line: Input bytes string.
         i: Index of the first character to consume in *line*.
 
     Returns:
-        A tuple (value, j) which holds the result of the parse and the index of
-        the first unconsumed character in *line*.
+        A tuple *(value, j)* which holds the result of the parse and the index
+        of the first unconsumed character in *line*.
 
     Raises:
         Exception: if the parse failed.
     """
     end = len(line)
-    if i == end or line[i] != 0x22:
-        raise Exception('Did not find expected string at byte %d in line %s' %(i, u(line)))
+    if i == end or line[i] != 0x5b:
+        raise wsl.ParseError('Did not find expected string at byte %d in line %s' %(i, u(line)))
     i += 1
-    s = []
-    while i < end:
-        if line[i] == 0x22:
-            return bytes(s), i+1
-        if line[i] == 0x5c:
-            if end - i < 2 or (line[i+1] == 'x' and end - i < 4):
-                raise Exception('Failed to parse escape sequence at byte %d in line %s' %(i, u(line)))
-            m = { 0x22: 0x22, 0x5c: 0x5c, 0x6e: 0x0a, 0x72: 0x0d, 0x74: 0x09 }
-            if line[i+1] in m:
-                s.append(m[line[i+1]])
-                i += 2
-            elif line[i+1] == 0x78:
-                hi = hexconvert(line[i+2])
-                lo = hexconvert(line[i+3])
-                if hi is None or lo is None:
-                    raise Exception('Failed to convert hex sequence at byte %d in line %s' %(i, u(line)))
-                s.append(hi*16 + lo)
-                i += 4
-            else:
-                raise Exception('Failed to convert escape sequence at byte %d in line %s' %(i, u(line)))
-        elif line[i] >= 0x20 and line[i] != 0x7f:
-            s.append(line[i])
-            i += 1
-        else:
-            raise Exception('Failed to parse string literal at byte %d in line %s' %(i, u(line)))
+    x = i
+    while i < end and line[i] != 0x5d:
+        i += 1
+    if i == end:
+        raise wsl.ParseError('EOL while looking for closing quote in line %s' %(u(line),))
+    return line[x:i], i+1
 
 def parse_space(line, i):
-    """Parse a space separating two tokens in a database tuple line.
+    """Parse a space that separates two tokens in a database tuple line.
 
     This function parses expects precisely one space character, and throws an
     exception if the space is not found.
@@ -146,6 +294,9 @@ def parse_space(line, i):
 
     Returns:
         If the parse succeed, the index of the next character following the space.
+
+    Raises:
+        Exception: If no space is found.
     """
     end = len(line)
     if i == end or line[i] != 0x20:
@@ -153,17 +304,16 @@ def parse_space(line, i):
     return i+1
 
 def parse_values(line, i, datatypes):
+    """Parse values from line according to *datatypes*, separated by single spaces.
+    """
     end = len(line)
     vs = []
     for dt in datatypes:
         i = parse_space(line, i)
-        if dt.syntaxtype == wsl.datatype.SYNTAX_ATOM:
-            s, i = parse_atom(line, i)
-        elif dt.syntaxtype == wsl.datatype.SYNTAX_STRING:
-            s, i = parse_string(line, i)
-        else:
-            assert False
-        val = dt.decode(s)
+        e, r = dt.decode(line, i)
+        if e != wsl.PARSE_OK:
+            raise Exception('Failed to parse value at byte %d in line %s: %s' %(i, line, r or '(unknown reason)'))
+        val, i = r
         vs.append(val)
     if i != end:
         raise Exception('Expected EOL at byte %d in line %s' %(i, u(line)))
@@ -205,7 +355,7 @@ def parse_db(lines, schemastring=None, datatype_parsers=None):
             *%*)
         datatype_parsers: Optional datatype-declaration parsers for the
             datatypes used in the database. If None is given, only the
-            built-in datatypes (wsl.datatype.default_datatype_parsers) are
+            built-in datatypes (wsl.builtin_datatype_parsers) are
             available.
 
     Returns:
@@ -221,16 +371,15 @@ def parse_db(lines, schemastring=None, datatype_parsers=None):
 
     if schemastring is None:
         schemastring = split_header(lookahead)
-    schema = wsl.schema.parse_schema(schemastring, datatype_parsers)
+    schema = parse_schema(schemastring, datatype_parsers)
 
-    datatypes_of_relation = wsl.schema.make_datatypes_of_relation(schema)
     tuples_of_relation = dict()
     for relation in schema.relations:
         tuples_of_relation[relation] = []
     for line in lookahead:
         line = line.strip()
         if line:
-            r, tup = parse_row(line, datatypes_of_relation)
+            r, tup = parse_row(line, schema.datatypes_of_relation)
             tuples_of_relation[r].append(tup)
 
     return schema, tuples_of_relation
