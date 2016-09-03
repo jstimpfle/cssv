@@ -3,11 +3,11 @@ from .exceptions import WslError
 from .exceptions import ParseError
 from .exceptions import FormatError
 from .exceptions import IntegrityError
-from .format import format_atom
-from .format import format_string
+from .format import format_tuple
 from .format import format_schema
 from .format import format_db
 from .integrity import check_integrity
+from .parse import parse_space
 from .parse import parse_row
 from .parse import parse_db
 from .parse import parse_db_file

@@ -21,39 +21,6 @@ def format_schema(schema, escape=False):
     else:
         return schema.spec
 
-def format_atom(token):
-    """Encode a WSL atom
-
-    Args:
-        token: A string that holds a valid WSL atom value.
-
-    Returns:
-        A string holding *token* encoded as a WSL atom literal. If the format
-        succeeds, the return value is identical to *token* as per the WSL
-        specification.
-
-    Raises:
-        wsl.FormatError: If the value isn't a valid atom.
-    """
-    # XXX
-    return token
-
-def format_string(token):
-    """Encode a WSL string literal.
-
-    Args:
-        token: A string that holds a WSL string.
-
-    Returns:
-        A string holding *token* encoded as a WSL string literal.
-    """
-    end = len(token)
-    i = 0
-    while i < end:
-        if ord(token[i]) == 0x22 or ord(token[i]) < 0x20 or ord(token[i] == 0x7f):
-            raise wsl.FormatError('Invalid character %d in token %s' %(token[i], token))
-        i += 1
-    return '[' + token + ']'
 
 def format_tuple(relation, tup, datatypes):
     """Encode a database tuple as a WSL database row.

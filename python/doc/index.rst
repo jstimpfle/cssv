@@ -14,17 +14,17 @@ serialization format for relational data. It is in many ways a better CSV:
 
  - Lines are table rows with fixed columns instead of just token lists
  - Parsing returns sanitized values, not only strings (according to the columns of each table)
- - Built-in datatypes: Identifiers, Strings, Enums, Integers
- - Easy to integrate custom datatypes
+ - Unique and foreign keys supported.
+ - Built-in datatypes: Identifiers ("Atoms"), Strings, Enums, Integers
+ - Easy integration of custom datatypes
  - Per-datatype lexical syntax for readable, editable, and hackable databases.
- - Unique and foreign keys supported as defined by WSL
 
 The other goal is to be a better Sqlite whenever the data is small enough to be
 scanned completely. For example, many web applications.
 
  - Well-known benefits of textual storage
- - No fixed set of datatypes -- no additional conversion boilerplate
- - No fixed query language -- no SQL boilerplate and no huge query strings
+ - Extendable set of datatypes -- no additional conversion boilerplate
+ - Composable with any query language -- Parse data as python lists of tuples. No SQL boilerplate and no huge query strings
 
 wsl in 1 minute:
 ----------------
@@ -64,7 +64,7 @@ separately.
 
     import wsl
 
-    schemastring = """
+    schemastring = """\
     DOMAIN Person Atom
     DOMAIN Comment String
     TABLE person Person Comment
@@ -127,8 +127,8 @@ any given value to a string. Let's make a datatype for base64 encoded data.
 Finally, we need another parser which gets DOMAIN directives on a single line
 and returns a datatype object (which contains the decoder and the encoder).
 This is the place where the datatype can be parameterized. For example, this
-parser could be made to understand a language that describes a range of valid
-integers, or a string type that is parameterized by a regular expression.
+parser could be made to understand a specification of a range of valid
+integers, or regular expressions that specify valid string values.
 
 In this example, we don't add any parameterizability. But later, we might want
 to specifiy other characters instead of + and /.
@@ -159,33 +159,18 @@ Now we can easily parse a database using our custom parser:
     """
 
     db = """
-    pic [cat.xpm] bGDOgm10Dm+5ZPjfNmuP4kalHWUlqT3ZAK7WdP9QniET60y5aO4WmxDCxZUTD/IKOrC2DTSLSb/tLWkb7AyYfP1oMqdw08AFEVTdl8EEA2xldYPF4FY9WB5N+87Ymmjo7vVMpiFvcMJkZZv0zOQ6eeMpCUH2MoTPrrkTHOHx/yPA2hO32gKnOGpoCZQ7q6wUS/M1oHd6DRu1CyIMeJTAZAQjJz74oYAfr8Qt1GOWVswzLkojZlODE1WcVt8nrfm3+Kj3YNS43g2zNGwf7mb2Z7OZwzMqtQNnCuDJgXN3
+    pic [cat.png] bGDOgm10Dm+5ZPjfNmuP4kalHWUlqT3ZAK7WdP9QniET60y5aO4WmxDCxZUTD/IKOrC2DTSLSb/tLWkb7AyYfP1oMqdw08AFEVTdl8EEA2xldYPF4FY9WB5N+87Ymmjo7vVMpiFvcMJkZZv0zOQ6eeMpCUH2MoTPrrkTHOHx/yPA2hO32gKnOGpoCZQ7q6wUS/M1oHd6DRu1CyIMeJTAZAQjJz74oYAfr8Qt1GOWVswzLkojZlODE1WcVt8nrfm3+Kj3YNS43g2zNGwf7mb2Z7OZwzMqtQNnCuDJgXN3
     """
 
     dtparsers = wsl.builtin_datatype_parsers + (('Base64', parse_base64_datatype),)
     lines = iter(db.splitlines())
     schema, tables = wsl.parse_db(lines, schemastring, datatype_parsers=dtparsers)
 
-Contents:
-
-.. toctree::
-   :maxdepth: 2
-   :imported: True
+API listing
+-----------
 
 .. automodule:: wsl
-   :members: parse_atom, parse_string, parse_space, parse_row, parse_db, parse_db_file
-
-.. automodule:: wsl.schema
-.. autoclass:: wsl.schema.Schema
-
-.. automodule:: wsl.integrity
-   :members: check_integrity
-
-.. automodule:: wsl.parse
-   :members: parse_atom, parse_string, parse_space, parse_row, parse_db, parse_db_file
-
-.. automodule:: wsl.format
-   :members: format_atom, format_string, format_tuple, format_db
+   :members: parse_db, parse_db_file, check_integrity, Schema, format_db, parse_row, format_tuple
 
 Indices and tables
 ==================
@@ -193,4 +178,3 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
-
