@@ -20,7 +20,7 @@ if __name__ == '__main__':
     else:
         schemastring = None
 
-    lines = iter(sys.stdin.buffer)
+    lines = iter(sys.stdin)
     schema, tables = wsl.parse_db(lines, schemastring, datatype_parsers=None)
 
     problems = wsl.check_integrity(schema, tables)
@@ -28,5 +28,4 @@ if __name__ == '__main__':
         print('Integrity error:', x)
     if len(problems) == 0:
         txt = wsl.format_db(schema, tables, inline_schema=True)
-        sys.stdout.buffer.write(txt)
-        sys.stdout.buffer.flush()
+        print(txt, end='')

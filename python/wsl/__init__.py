@@ -1,5 +1,3 @@
-from .datatype import PARSE_OK
-from .datatype import PARSE_ERROR
 from .datatype import builtin_datatype_parsers
 from .exceptions import WslError
 from .exceptions import ParseError
@@ -10,6 +8,8 @@ from .format import format_string
 from .format import format_schema
 from .format import format_db
 from .integrity import check_integrity
+from .parse import parse_row
 from .parse import parse_db
+from .parse import parse_db_file
 from .parse import parse_schema
 from .schema import Schema

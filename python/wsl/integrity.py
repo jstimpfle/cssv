@@ -8,7 +8,7 @@ def check_integrity(schema, tuples_of_relation):
     Args:
         schema: A *wsl.Schema* object
         tuples_of_relation: A dict which maps each relation name in
-            *schema.relations* to a list of tuples.
+            *schema.relations* to a list of database tuples.
 
     Returns:
         A list of all the problems that were found. (If no problems were found
