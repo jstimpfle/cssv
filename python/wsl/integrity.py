@@ -15,16 +15,6 @@ def check_integrity(schema, tuples_of_relation):
         an empty list is returned).
     """
 
-    def u(bin):
-        try:
-            return bin.decode('utf-8')
-        except UnicodeDecodeError:
-            s = bin.decode('utf-8', 'backslashreplace')
-            raise Exception('Not valid UTF-8: "%s"' % (s,))
-
-    def uj(bins):
-        return ' '.join(u(bin) for bin in bins)
-
     def key_from_tup(tup, ix):
         return tuple(tup[i] for i in ix)
 
@@ -53,7 +43,7 @@ def check_integrity(schema, tuples_of_relation):
             for name, ix, x in data.keys:
                 key = key_from_tup(tup, ix)
                 if key in x:
-                    problems.append('Row (%s %s)" violates a unique key constraint: %s' %(u(relation), uj(tup), u(name)))
+                    problems.append('Row (%s %s)" violates a unique key constraint: %s' %(relation, ','.join(tup), name))
                 x.add(key)
     for relation in schema.relations:
         data = data_of[relation]
@@ -61,5 +51,5 @@ def check_integrity(schema, tuples_of_relation):
             for name, ix, x in data.refs:
                 key = key_from_tup(tup, ix)
                 if key not in x:
-                    problems.append('Row (%s %s) violates referential integrity: %s' %(u(relation), uj(tup), u(name)))
+                    problems.append('Row (%s %s) violates referential integrity: %s' %(relation, ','.join(tup), name))
     return problems

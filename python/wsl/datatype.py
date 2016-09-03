@@ -19,16 +19,6 @@ value. A *wsl.FormatError* is raised if the encode fails.
 
 import wsl
 
-def _u(bin):
-    try:
-        return bin.decode('utf-8')
-    except UnicodeDecodeError:
-        s = bin.decode('utf-8', 'backslashreplace')
-        raise Exception('Not valid UTF-8: "%s"' % (s,))
-
-def _uj(bins):
-    return ' '.join(_u(bin) for bin in bins)
-
 def parse_atom_datatype(line):
     """Parser for Atom datatype declarations.
 
@@ -80,7 +70,7 @@ def atom_decode(line, i):
     while i < end and ord(line[i]) > 0x20 and ord(line[i]) != 0x7f:
         i += 1
     if x == i:
-        raise wsl.ParseError('EOL or invalid character while expecting atom at byte %d in line "%s"' %(i, _u(line)))
+        raise wsl.ParseError('EOL or invalid character while expecting atom at character %d in line "%s"' %(i+1, line))
     return (line[x:i], i)
 
 def atom_encode(atom):
@@ -94,13 +84,13 @@ def string_decode(line, i):
     """Value decoder for String datatype"""
     end = len(line)
     if i == end or ord(line[i]) != 0x5b:
-        raise wsl.ParseError('Did not find expected string at byte %d in line %s' %(i, _u(line)))
+        raise wsl.ParseError('Did not find expected WSL string literal at character %d in line %s' %(i+1, line))
     i += 1
     x = i
     while i < end and ord(line[i]) != 0x5d:
         i += 1
     if i == end:
-        raise wsl.ParseError('EOL while looking for closing quote in line %s' %(_u(line),))
+        raise wsl.ParseError('EOL while looking for closing quote in line %s' %(line))
     return (line[x:i], i+1)
 
 def string_encode(string):
@@ -114,9 +104,9 @@ def integer_decode(line, i):
     """Value decoder for Integer datatype"""
     end = len(line)
     if i == end or not 0x30 <= ord(line[i]) < 0x40:
-        raise wsl.ParseError('Did not find expected integer literal at byte %d in line %s' %(i, _u(line)))
+        raise wsl.ParseError('Did not find expected integer literal at character %d in line %s' %(i+1, line))
     if ord(line[i]) == 0x30:
-        raise wsl.ParseError('Found integer literal starting with zero at byte %d in line %s' %(i, _u(line)))
+        raise wsl.ParseError('Found integer literal starting with zero at character %d in line %s' %(i+1, line))
     n = ord(line[i]) - 0x30
     i += 1
     while i < end and 0x30 <= ord(line[i]) < 0x40:
@@ -136,13 +126,13 @@ def make_enum_decode(options):
         while i < end and 0x21 < ord(line[i]) and ord(line[i]) != 0x7f:
             i += 1
         if x == i:
-            raise wsl.ParseError('Did not find expected token at line "%s" byte %d' %(_u(line), i))
+            raise wsl.ParseError('Did not find expected token at line "%s" character %d' %(line, i))
         token = line[x:i]
         for option in options:
             v, t = option
             if t == token:
                 return (option, i)
-        raise wsl.ParseError('Invalid token "%s" at line "%s" byte %d; valid tokens are %s' %(_u(token), _u(line), i, _uj(y for x, y in options)))
+        raise wsl.ParseError('Invalid token "%s" at line "%s" character %d; valid tokens are %s' %(token, line, i, ','.join(y for x, y in options)))
     return enum_decode
 
 def make_enum_encode(options):

@@ -4,7 +4,7 @@ class Schema:
     """Schema information for a WSL database.
 
     Attributes:
-        spec: bytes object containing the textual representation of the schema.
+        spec: string containing the textual representation of the schema.
             This is normally the string that the schema object was parsed from.
 
         domains: set object, holding the identifiying names of all the domains
@@ -16,23 +16,21 @@ class Schema:
         references: set object, holding the identifying names of all the
             references used in this schema.
 
-        spec_of_domain: bytes object containing the textual specification of
-            each domain identified by the names in the *domains* attribute.  It
-            is guaranteed to be a single line (including the terminating
-            newline character).
-        spec_of_relation: bytes object containing the textual specification of
-            each relation identified by the names in the *relations* attribute.
-            It is guaranteed to be a single line (including the terminating
-            newline character).
-        spec_of_key: bytes object containing the textual representation of each
-            key identified by the names in the *keys* attribute.  It is
+        spec_of_domain: string containing the textual specification of each
+            domain identified by the names in the *domains* attribute.  It is
             guaranteed to be a single line (including the terminating newline
             character).
-        spec_of_reference: bytes object containing the textual representation
-            of each reference identified by the names in the *references*
-            attribute. It is guaranteed to be a single line (including the
-            terminating newline character).
-
+        spec_of_relation: string containing the textual specification of each
+            relation identified by the names in the *relations* attribute.  It
+            is guaranteed to be a single line (including the terminating
+            newline character).
+        spec_of_key: string containing the textual representation of each key
+            identified by the names in the *keys* attribute.  It is guaranteed
+            to be a single line (including the terminating newline character).
+        spec_of_reference: string containing the textual representation of each
+            reference identified by the names in the *references* attribute. It
+            is guaranteed to be a single line (including the terminating
+            newline character).
         datatype_of_domain: dict object, mapping each domain name from the
             *domains* attribute to its corresponding *datatype* object.
         domains_of_relation: dict object, mapping each relation name from the
@@ -56,6 +54,27 @@ class Schema:
             domains, relations, keys, references,
             spec_of_relation, spec_of_domain, spec_of_key, spec_of_reference,
             datatype_of_domain, domains_of_relation, tuple_of_key, tuple_of_reference):
+
+        for x in domains:
+            assert x in spec_of_domain
+            assert x in datatype_of_domain
+
+        for xs in domains_of_relation.values():
+            for x in xs:
+                assert x in domains
+
+        for x in relations:
+            assert x in spec_of_relation
+            assert x in domains_of_relation
+
+        for x in keys:
+            assert x in spec_of_key
+            assert x in tuple_of_key
+
+        for x in references:
+            assert x in spec_of_reference
+            assert x in tuple_of_reference
+
         self.spec = spec
         self.domains = domains
         self.relations = relations

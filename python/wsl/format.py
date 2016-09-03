@@ -64,7 +64,7 @@ def format_tuple(relation, tup, datatypes):
         datatypes: Tuple, holding datatype objects according to the relation given.
 
     Returns:
-        A byte-object containing a single line (including the terminating newline
+        A string containing a single line (including the terminating newline
         character).
 
     Raises:

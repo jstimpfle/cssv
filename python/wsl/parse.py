@@ -8,7 +8,6 @@ def _isvariable(v):
 
 class Ahead:
     def __init__(self, iter):
-        assert hasattr(iter, '__next__')
         self.iter = iter
         self.x = None
     def unget(self, x):
@@ -175,11 +174,11 @@ def parse_schema(schemastring, datatype_parsers):
         datatype_of_domain[domain] = dt
     for relation in relations:
         spec = spec_of_relation[relation]
-        doms = spec.split()
-        for dom in doms:
-            if dom not in doms:
+        rdoms = spec.split()
+        for dom in rdoms:
+            if dom not in domains:
                 raise wsl.ParseError('Declaration of table "%s" references unknown domain "%s"' %(relation, dom))
-        domains_of_relation[relation] = doms
+        domains_of_relation[relation] = rdoms
     for key in keys:
         spec = spec_of_key[key]
         name, rel, vs = parse_key_decl(spec)
@@ -226,14 +225,11 @@ def parse_schema(schemastring, datatype_parsers):
 def parse_relation(line, i):
     end = len(line)
     if not 0x41 <= ord(line[i]) <= 0x5a and not 0x61 <= ord(line[i]) <= 0x7a:
-        raise wsl.ParseError('Expected table name at byte %d in line "%s"' %(i, line))
+        raise wsl.ParseError('Expected table name at character %d in line "%s"' %(i+1, line))
     x = i
     while i < end and (0x41 <= ord(line[i]) <= 0x5a or 0x61 <= ord(line[i]) <= 0x7a):
         i += 1
-    try:
-        return line[x:i], i
-    except:
-        raise wsl.ParseError('Failed to decode relation name "%s" as ASCII' %(line[x:i],))
+    return line[x:i], i
 
 def parse_space(line, i):
     """Parse a space that separates two tokens in a database tuple line.
@@ -271,7 +267,7 @@ def parse_values(line, i, datatypes):
         val, i = dt.decode(line, i)
         vs.append(val)
     if i != end:
-        raise wsl.ParseError('Expected EOL at byte %d in line %s' %(i, line))
+        raise wsl.ParseError('Expected EOL at character %d in line %s' %(i+1, line))
     return tuple(vs)
 
 def parse_row(line, datatypes_of_relation):
@@ -340,7 +336,7 @@ def parse_db(lines, schemastring=None, datatype_parsers=None):
 def parse_db_file(filepath, schemastring=None, datatype_parsers=None):
     """Convenience def for parsing a WSL database from file in the filesystem.
 
-    This opens the file at *filepath* for reading in binary mode, uses the
+    This opens the file at *filepath* for reading as a UTF-8 stream, uses the
     resulting file handle to construct an appropriate lines iterator, and
     forwards it and the remaining arguments to *parse_db*.
 
@@ -357,6 +353,6 @@ def parse_db_file(filepath, schemastring=None, datatype_parsers=None):
         Exception: Exceptions that result from the filesystem I/O while opening
             or reading the file are not catched; they bubble up to the caller.
     """
-    with open(filepath, "rb") as f:
+    with open(filepath, "r", encoding="utf-8") as f:
         lines = (line.rstrip('\n') for line in f)
         return parse_db(lines, schemastring, datatype_parsers)
