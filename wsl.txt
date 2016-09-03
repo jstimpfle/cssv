@@ -2,19 +2,17 @@ Whitespace separated literals (WSL)
 ===================================
 
 WSL is a human and programmer friendly text serialization format for
-relational databases. Here is an example of a Databases notated as WSL:
+relational databases. Here is an example of a database notated as WSL:
 
 % DOMAIN Person Atom
 % DOMAIN PersonDesc String
 % DOMAIN Gender Enum male female
-
 % TABLE Person Person Gender PersonDesc
 % TABLE Friends Person Person
 % TABLE Couple Person Person
-
-Person Jack male "Jack of all Trades"
-Person John male "John Doe"
-Person Jane female "Jane Dane"
+Person Jack male [Jack of all Trades]
+Person John male [John Doe]
+Person Jane female [Jane Dane]
 Friends Jack Jane
 Couple John Jane
 
@@ -41,8 +39,8 @@ particular, 0x09 (tab) and 0x0d (cr) are not supported.
 
 The stream consists of a header followed by the relational data. The
 header holds the database schema. Each non-empty line of the header must
-be prefixed with a '%' (0x25) character. The schema language is
-discussed later.
+be prefixed with a '%' (0x25) character followed by a space (0x20). The
+schema language is discussed later.
 
 After the header, each row of the data is given on a single line
 (extinct of newline characters) as a sequence of tokens which are
@@ -52,40 +50,41 @@ The first such token is always the name of the table to which the row
 belongs.
 
 The remaining tokens are the values of the row (in order corresponding
-to the columns of the table). Each token is encoded as an *atom* or as a
-*string*, according to its column's syntactic type, which may be of
-either atom or string type.
+to the columns of the table). Each token is parsed according to the
+lexical rules created by the datatype of the current column. The set of
+available datatype is generally extensible by the user of a WSL
+impplementation. However, there are a few standard datatypes that every
+implementation must provide, and there is a certain minimalistic
+aesthetic that the lexical syntaxes of user-defined datatypes should
+conform to.
 
-An atom is simply a sequence of allowed bytes except whitespace, i.e.
-0x21-0x7e, 0x80-0xff. Note that it's actually a little more restricted
-than that due to the fact that the file has to be a valid UTF-8 stream.
-Also, it's a bad idea to use for example Unicode whitespace characters
-other than U+0020 (space); but due to the complexities of Unicode this
-can't be avoided by design.
+The standard datatypes are: Atom, String, Enum, Integer.
 
-Atoms are useful for numbers and identifiers, and often serve as keys in
-relations. But they can be used for almost anything which does not
-contain space characters. For example, URLs, dates, times...
+An Atom is simply a sequence of characters excepting space (0x20), '['
+and ']' (0x5b and 0x5d) (and excepting the disallowed characters
+0x00-0x1f, 0x7f). Atoms are useful for numbers and identifiers, and
+often serve as keys in relations. But they can be used for almost
+anything which does not contain space characters. For example, URLs,
+dates, times. The lexicographic order is the binary order.
 
-A string literal starts with a double quote (0x22) character and ends at
-the first following unescaped double quote character. By means of
-escaping string literals can represent arbitrary data (and so they are
-meant for accompanying data like comments). Escaping is C-style: the
-backslash character introduces an escape sequence. The following escape
-sequences and interpretations as (binary) data are possible:
+Strings can contain any characters Atoms can, plus space (0x20). They
+are enclosed in square brackets (0x5b and 0x5d). Ordering is the binary
+ordering. No escaping is defined.
 
-Escape sequence | Interpretation
---------------------------------
-\t              | horizontal tab (0x09)
-\n              | newline (0x0a)
-\r              | carriage return (0x0d)
-\"              | double quote (0x22)
-\\              | backslash (0x5c)
-\xHH            | Byte in (lower case) hexadecimal notation
+Enums are sets of allowed identifiers. The set is configured in the
+DOMAIN declaration line, for example
 
-Hexadecimal notation is required for the representation of ASCII control
-characters other than \t, \n and \r. In the interest of normalization it
-is discouraged otherwise.
+% DOMAIN FooVal foo bar baz quux
+
+This defines an Enum datatype (called FooVal) with four possible values.
+The ordering is given by the order from the declaration.
+
+Integers are sequences of digits 0-9. Only 0 is allowed to with the 0
+character. The range of representable characters is
+implementation-defined (representation as 32-bit or 64-bit integers is
+allowed). The internal representation is also implementation defined.
+Ordering is the ordering of their integer values (not lexicographic
+ordering).
 
 DATABASE SCHEMA LANGUAGE
 ========================
@@ -99,30 +98,24 @@ for database inline notation.
 
 % SCHEMA NAME example-schema
 % SCHEMA VERSION 1
-%
-% DOC SCHEMA no documentation today
-%
-% DOC DOMAIN Person registered person
-% DOC DOMAIN Gender gender of a person
-% DOC DOMAIN Comment free-form comment
-%
-% DOC TABLE Person This table is meant to store all persons
-% DOC TABLE Friends
-% DOC TABLE Couple
-%
 % DOMAIN User Atom
 % DOMAIN Gender Enum male female
 % DOMAIN Comment String
-%
 % TABLE Person User Gender Comment
 % TABLE Couple User User
 % TABLE Friends User User
-%
 % KEY Person P *
 % REFERENCE Friends P * => Person P *
 % REFERENCE Friends * P => Person P *
 % REFERENCE Couple P * => Person P *
 % REFERENCE Couple * P => Person P *
+% DOC SCHEMA no documentation today
+% DOC DOMAIN Person registered person
+% DOC DOMAIN Gender gender of a person
+% DOC DOMAIN Comment free-form comment
+% DOC TABLE Person This table is meant to store all persons
+% DOC TABLE Friends
+% DOC TABLE Couple
 
 Explanation of this language follows.
 
