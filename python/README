@@ -2,3 +2,6 @@ To generate documentation, use the Sphinx source under doc/. For
 example,
 
 $ make -C doc/ html
+
+It needs the Sphinx autodoc extension, and the relatively new `napoleon`
+extension (which is not in Debian jessie but stretch).
