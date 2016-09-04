@@ -28,7 +28,7 @@ def split_header(ahead):
     database header (if any) and returns them as a single string.
 
     Args:
-        ahead: An Ahead instance
+        ahead (wsl.Ahead)
 
     Returns:
         the database header with the leading % characters stripped off.
@@ -48,12 +48,12 @@ def parse_domain_decl(name, line, datatype_parsers):
     """Parse a domain declaration line.
 
     Args:
-        name: Name for the resulting domain
-        line: Bytes object containing the specification of the datatype.
-        datatype_parsers: dict mapping datatype parser names to datatype parsers.
+        name (str): name for the resulting domain.
+        line (str): contains specification of the datatype to parse.
+        datatype_parsers (dict): dict mapping datatype parser names to datatype parsers.
 
     Returns:
-        The parsed datatype.
+        wsl.datatype: The parsed datatype.
 
     Raises:
         wsl.ParseError: If the parse failed
@@ -75,13 +75,13 @@ def parse_key_decl(line):
     """Parse a key constraint declaration.
 
     Args:
-        line: A string holding a key declaration (without the leading KEY
-            keyword) on a single line
+        line (str): holds the key specification to parse (without the leading
+            KEY keyword) on a single line
 
     Returns:
-        A 3-tuple (name, relation, variables) consisting of an identifying name
-        (currently just the line itself), the relation on which the key
-        constraint is placed, and the variables or * characters split into a list
+        (str, str, list): A 3-tuple (name, relation, variables) consisting of
+        an identifying name (currently just the line itself), the relation on
+        which the key constraint is placed, and the variables or * characters split into a list
 
     Raises:
         wsl.ParseError: If the parse failed
@@ -94,13 +94,14 @@ def parse_reference_decl(line):
     """Parse a reference constraint declaration.
 
     Args:
-        line: A string holding a reference declaration (without the leading
-            REFERENCE keyword)
+        line (str): holds reference declaration (without the leading REFERENCE
+            keyword)
 
     Returns:
-        a 5-tuple (name, relation1, variables1, relation2, variables2) which
-        consists of an identifying name for the constraint (currently just the line
-        itself), and the local and foreign relation names and variable lists
+        (str, str, list, str, list): a 5-tuple (name, relation1, variables1,
+        relation2, variables2) which consists of an identifying name for the
+        constraint (currently just the line itself), and the local and foreign
+        relation names and variable lists.
 
     Raises:
         wsl.ParseError: If the parse failed
@@ -238,11 +239,12 @@ def parse_space(line, i):
     exception if the space is not found.
 
     Args:
-        line: A string which holds a line that represents a database tuple.
-        i: An index into the line where the space is supposed to be.
+        line (str) : holds a database tuple.
+        i (int): An index into the line where the space is supposed to be.
 
     Returns:
-        If the parse succeed, the index of the next character following the space.
+        int: If the parse succeed, the index of the next character following
+            the space.
 
     Raises:
         wsl.ParseError: If no space is found.
@@ -256,9 +258,10 @@ def parse_values(line, i, datatypes):
     """Parse values from line according to *datatypes*, separated by single spaces.
 
     Args:
-        line: A string which holds a line that represents a database tuple.
-        i: An index into the line where the space is supposed to be.
-        datatypes: Tuple holding the datatypes that are expected in this line.
+        line (str): holds a database tuple.
+        i (int): An index into the line where the space is supposed to be.
+        datatypes (tuple of wsl.datatype): Tuple holding the datatypes that are
+            expected in this line.
     """
     end = len(line)
     vs = []
@@ -271,18 +274,16 @@ def parse_values(line, i, datatypes):
     return tuple(vs)
 
 def parse_row(line, datatypes_of_relation):
-    """Parse a database tuple (consisting of a predicate name and according
-    values).
+    """Parse a database tuple (consisting of a table name and according values).
 
     Args:
-        line: Input string, which must be a line (should not contain newline
-            characters).
-        datatypes_of_relation: A dict mapping relation names to the list of
-            the datatypes of their according columns.
+        line (str): holds a database tuple.
+        datatypes_of_relation (dict): maps relation names to the list of the
+            datatypes of their according columns.
 
     Returns:
-        A 2-tuple (relation, values) consisting of a relation name and another
-        tuple holding the parsed values.
+        (str, tuple): A 2-tuple (relation, values) consisting of a relation
+        name and another tuple holding the parsed values.
 
     Raises:
         wsl.ParseError: if the parse failed.
@@ -298,20 +299,24 @@ def parse_row(line, datatypes_of_relation):
 def parse_db(lines, schemastring=None, datatype_parsers=None):
     """Convenience def to parse a WSL database.
 
+    This parses the schema (from *schemastring* if given, or else as inline
+    schema from *lines*), and then calls *parse_row()* with each line in
+    *lines*.
+
     Args:
-        lines: An iterator over the lines of the database.
-        schemastring: Optional extern schema specification. If None is given,
-            the schema is expected to be given inline (each line prefixed with
-            *%*)
-        datatype_parsers: Optional datatype-declaration parsers for the
+        lines (iter): An iterator over the lines of the database.
+        schemastring (str): Optional extern schema specification. If *None* is
+            given, the schema is expected to be given inline (each line
+            prefixed with *%*)
+        datatype_parsers (list): Optional datatype-declaration parsers for the
             datatypes used in the database. If None is given, only the
             built-in datatypes (wsl.builtin_datatype_parsers) are
             available.
 
     Returns:
-        A 2-tuple (schema, tuples_of_relation) consisting of the parsed schema
-        and a dict mapping each relation name (in schema.relations) to a list
-        of database tuples.
+        (str, dict): A 2-tuple (schema, tuples_of_relation) consisting of the
+        parsed schema and a dict mapping each relation name (in
+        schema.relations) to a list of database tuples.
 
     Raises:
         wsl.ParseError: if the parse failed.
@@ -334,16 +339,16 @@ def parse_db(lines, schemastring=None, datatype_parsers=None):
     return schema, tuples_of_relation
 
 def parse_db_file(filepath, schemastring=None, datatype_parsers=None):
-    """Convenience def for parsing a WSL database from file in the filesystem.
+    """Convenience def for parsing a WSL database from a file.
 
     This opens the file at *filepath* for reading as a UTF-8 stream, uses the
     resulting file handle to construct an appropriate lines iterator, and
-    forwards it and the remaining arguments to *parse_db*.
+    forwards it and the remaining arguments to *parse_db()*.
 
     Args:
-        filepath: Path to the file that contains the database.
-        schemastring: See *parse_db()*
-        datatype_parsers: See *parse_db()*
+        filepath (str): Path to the file that contains the database.
+        schemastring (str): See *parse_db()*
+        datatype_parsers (list): See *parse_db()*
 
     Returns:
         See *parse_db()*

@@ -6,15 +6,15 @@ def format_schema(schema, escape=False):
     """Encode a schema object as a WSL schema string.
 
     Args:
-        schema: The schema object
-        escape: Whether the resulting string should be escaped for inline
-            schema notation.
+        schema (wsl.Schema): The schema object
+        escape (bool): Whether the resulting string should be escaped for
+            inline schema notation.
 
     Returns:
-        A string which is the textual representation of the schema.  Currently,
-        this is just the *spec* attribute of the schema object. If
-        *escape=True*, each line is prepended with a '% ' sequence, so the
-        schema string can be used inline in a text file.
+        str: The textual representation of the schema. Currently, this is just
+        the *spec* attribute of the schema object. If *escape=True*, each line
+        is prepended with a '% ' sequence, so the schema string can be used
+        inline in a text file.
     """
     if escape:
         return ''.join('% ' + line + '\n' for line in schema.spec.splitlines())
@@ -22,33 +22,31 @@ def format_schema(schema, escape=False):
         return schema.spec
 
 
-def format_tuple(relation, tup, datatypes):
-    """Encode a database tuple as a WSL database row.
+def format_row(relation, tup, encoders):
+    """Encode a WSL database row.
 
     Args:
-        relation: Name of the relation this tuple belongs to.
-        tup: Tuple, holding values according to the relation given.
-        datatypes: Tuple, holding datatype objects according to the relation given.
+        relation (str): Name of the relation this tuple belongs to.
+        tup (tuple): Values according to the columns of *relation*
+        encoders (tuple): Encoders according to the columns of *relation*
 
     Returns:
-        A string containing a single line (including the terminating newline
-        character).
+        str: A single line (including the terminating newline character).
 
     Raises:
         wsl.FormatError: if formatting fails.
     """
     x = [relation]
-    for val, dt in zip(tup, datatypes):
-        token = dt.encode(val)
-        x.append(token)
+    for val, encode in zip(tup, encoders):
+        x.append(encode(val))
     return ' '.join(x) + '\n'
 
 def format_db(schema, tuples_of_relation, inline_schema):
     """Convenience function for encoding a WSL database.
 
     Args:
-        schema: The schema of the database.
-        tuples_of_relation: A dict that maps each relation name in
+        schema (wsl.Schema): The schema of the database.
+        tuples_of_relation (dict): A dictionary that maps each relation name in
             *schema.relations* to a list that contains all the rows of that
             relation.
 
@@ -65,9 +63,11 @@ def format_db(schema, tuples_of_relation, inline_schema):
     """
     lines = []
     for relation in sorted(tuples_of_relation.keys()):
-        dts = schema.datatypes_of_relation[relation]
+        encoders = []
+        for x in schema.domains_of_relation[relation]:
+            encoders.append(schema.datatype_of_domain[x].encode)
         for tup in sorted(tuples_of_relation[relation]):
-            lines.append(format_tuple(relation, tup, dts))
+            lines.append(format_row(relation, tup, encoders))
     body = ''.join(lines)
     if inline_schema:
         hdr = format_schema(schema, escape=True)

@@ -97,7 +97,7 @@ def string_encode(string):
     """Value encoder for String datatype"""
     for c in string:
         if ord(c) < 0x20 or ord(c) in [0x5b, 0x5d, 0x7f]:
-            raise ValueError('Disallowed character %c in String value' %(c, string))
+            raise ValueError('Disallowed character %c in String value: %s' %(c, string))
     return '[' + string + ']'
 
 def integer_decode(line, i):

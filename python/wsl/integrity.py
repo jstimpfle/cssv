@@ -43,7 +43,7 @@ def check_integrity(schema, tuples_of_relation):
             for name, ix, x in data.keys:
                 key = key_from_tup(tup, ix)
                 if key in x:
-                    problems.append('Unique key constraint violated: %s' %(wsl.format_tuple(relation, tup, schema.datatypes_of_relation[relation])[:-1],))
+                    problems.append('Unique key constraint violated: %s %s' %(relation, tup))
                 x.add(key)
     for relation in schema.relations:
         data = data_of[relation]
@@ -51,5 +51,5 @@ def check_integrity(schema, tuples_of_relation):
             for name, ix, x in data.refs:
                 key = key_from_tup(tup, ix)
                 if key not in x:
-                    problems.append('Row (%s %s) violates referential integrity: %s' %(relation, ','.join(tup), name))
+                    problems.append('Row (%s %s) violates referential integrity: %s' %(relation, tup, name))
     return problems

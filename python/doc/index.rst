@@ -1,33 +1,31 @@
-.. WSL documentation master file, created by
-   sphinx-quickstart on Mon Aug 22 16:37:51 2016.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
-wsl - library for WSL databases
-===============================
+wsl - Python 3 library for WSL databases
+========================================
 
 This library provides an easy to use API to read and write WSL databases with
-built-in and user-defined datatypes.
+built-in and user-defined datatypes. It does not fight the system but uses
+*str* for parsing and formatting throughout; the disadvantage being that it's
+rather slow.
 
 WSL (whitespace separated literals) is an extremely simple and practical text
 serialization format for relational data. It is in many ways a better CSV:
 
- - Lines are table rows with fixed columns instead of just token lists
+ - Contains database (schema + many tables) instead of only one table
+ - One line per table row without exception
  - Parsing returns sanitized values, not only strings (according to the columns of each table)
- - Unique and foreign keys supported.
- - Built-in datatypes: Identifiers ("Atoms"), Strings, Enums, Integers
+ - Per-datatype lexical syntax for readable, editable, and hackable databases
+ - Built-in datatypes with sane syntaxes and behaviours: Identifiers ("Atoms"), Strings, Enums, Integers
  - Easy integration of custom datatypes
- - Per-datatype lexical syntax for readable, editable, and hackable databases.
+ - Unique and foreign keys supported
 
-The other goal is to be a better Sqlite whenever the data is small enough to be
+The other goal is to be a better SQLite whenever the data is small enough to be
 scanned completely. For example, many web applications.
 
  - Well-known benefits of textual storage
- - Extendable set of datatypes -- no additional conversion boilerplate
- - Composable with any query language -- Parse data as python lists of tuples. No SQL boilerplate and no huge query strings
+ - Extendable set of datatypes -- no tedious conversion boilerplate
+ - Easy to compose with any query language -- data comes out as python lists of tuples. No SQL boilerplate and no huge query strings
 
-wsl in 1 minute:
-----------------
+The wsl library in 1 minute:
+----------------------------
 
 Read a WSL database from a file with included schema. The built-in datatypes
 *Atom* and *String* are used to construct meaningful domains. These domains are
@@ -131,7 +129,7 @@ parser could be made to understand a specification of a range of valid
 integers, or regular expressions that specify valid string values.
 
 In this example, we don't add any parameterizability. But later, we might want
-to specifiy other characters instead of + and /.
+to specify other characters instead of + and /.
 
 .. code:: python3
 
@@ -170,11 +168,4 @@ API listing
 -----------
 
 .. automodule:: wsl
-   :members: parse_db, parse_db_file, check_integrity, Schema, format_db, parse_row, format_tuple
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+   :members: parse_db, parse_db_file, parse_row, parse_values, parse_schema, parse_domain_decl, parse_key_decl, parse_reference_decl, check_integrity, Schema, format_db, format_row,
