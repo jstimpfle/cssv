@@ -16,12 +16,11 @@ if __name__ == '__main__':
 
     if schemafile:
         with open(schemafile, 'rb') as f:
-            schemastring = f.read()
+            sch = f.read()
     else:
-        schemastring = None
+        sch = None
 
-    lines = iter(sys.stdin)
-    schema, tables = wsl.parse_db(lines, schemastring, datatype_parsers=None)
+    schema, tables = wsl.parse_db(dblines=sys.stdin, schemastr=sch, datatype_parsers=None)
 
     problems = wsl.check_integrity(schema, tables)
     for x in problems:
