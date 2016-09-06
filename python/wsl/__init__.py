@@ -11,7 +11,6 @@ from .parse import parse_space
 from .parse import parse_row
 from .parse import parse_values
 from .parse import parse_db
-from .parse import parse_db_file
 from .parse import parse_schema
 from .parse import parse_domain_decl
 from .parse import parse_key_decl

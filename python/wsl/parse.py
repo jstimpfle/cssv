@@ -116,7 +116,7 @@ def parse_reference_decl(line):
     rel2, vs2 = parse_logic_tuple(fd)
     return name, rel1, vs1, rel2, vs2
 
-def parse_schema(schemastring, datatype_parsers):
+def parse_schema(schemastr, datatype_parsers):
     if datatype_parsers is None:
         datatype_parsers = dict(wsl.builtin_datatype_parsers)
     else:
@@ -135,7 +135,7 @@ def parse_schema(schemastring, datatype_parsers):
     tuple_of_key = {} 
     tuple_of_reference = {} 
 
-    for line in schemastring.splitlines():
+    for line in schemastr.splitlines():
         line = line.strip()
         if not line:
             continue
@@ -218,7 +218,7 @@ def parse_schema(schemastring, datatype_parsers):
         is2 = [i for _, i in sorted(ix2.items())]
         tuple_of_reference[name] = rel1, is1, rel2, is2
 
-    return wsl.Schema(schemastring,
+    return wsl.Schema(schemastr,
          domains, relations, keys, references,
          spec_of_relation, spec_of_domain, spec_of_key, spec_of_reference,
          datatype_of_domain, domains_of_relation, tuple_of_key, tuple_of_reference)
@@ -296,18 +296,23 @@ def parse_row(line, datatypes_of_relation):
     values = parse_values(line, i, datatypes)
     return relation, values
 
-def parse_db(lines, schemastring=None, datatype_parsers=None):
+def parse_db(dbfilepath=None, dblines=None, dbstr=None, schemastr=None, datatype_parsers=None):
     """Convenience def to parse a WSL database.
 
-    This parses the schema (from *schemastring* if given, or else as inline
-    schema from *lines*), and then calls *parse_row()* with each line in
-    *lines*.
+    This parses the schema (from *schemastr* if given, or else as inline schema
+    from *lines*), and then calls *parse_row()* with each line in *lines*.
+
+    Only one of dbfilepath, dblines or dbstr should be given.
 
     Args:
-        lines (iter): An iterator over the lines of the database.
-        schemastring (str): Optional extern schema specification. If *None* is
-            given, the schema is expected to be given inline (each line
-            prefixed with *%*)
+        dbfilepath (str or bytes): Path to the file that contains the database.
+        dblines (iter): An iterator yielding the (str) lines of the database.
+            This works for all TextIOBase objects, like sys.stdin or open()ed
+            files.
+        dbstr (str): A string that holds the database.
+        schemastr (str): Optional extern schema specification. If *None* is
+            given, the schema is expected to be given inline as part of the
+            database (each line prefixed with *%*)
         datatype_parsers (list): Optional datatype-declaration parsers for the
             datatypes used in the database. If None is given, only the
             built-in datatypes (wsl.builtin_datatype_parsers) are
@@ -321,11 +326,21 @@ def parse_db(lines, schemastring=None, datatype_parsers=None):
     Raises:
         wsl.ParseError: if the parse failed.
     """
-    lookahead = Ahead(lines)
+    if int(dbfilepath is not None) + int(dblines is not None) + int(dbstr is not None) != 1:
+        raise ValueError('parse_db() needs exactly one of dbfilepath, dblines or dbstr')
 
-    if schemastring is None:
-        schemastring = split_header(lookahead)
-    schema = parse_schema(schemastring, datatype_parsers)
+    if dbfilepath is not None:
+        lines = open(filepath, "r", encoding="utf-8", newline='\n')
+    if dblines is not None:
+        lines = dblines
+    if dbstr is not None:
+        lines = dbstr.split('\n')
+
+    lookahead = Ahead(iter(lines))
+
+    if schemastr is None:
+        schemastr = split_header(lookahead)
+    schema = parse_schema(schemastr, datatype_parsers)
 
     tuples_of_relation = dict()
     for relation in schema.relations:
@@ -337,27 +352,3 @@ def parse_db(lines, schemastring=None, datatype_parsers=None):
             tuples_of_relation[r].append(tup)
 
     return schema, tuples_of_relation
-
-def parse_db_file(filepath, schemastring=None, datatype_parsers=None):
-    """Convenience def for parsing a WSL database from a file.
-
-    This opens the file at *filepath* for reading as a UTF-8 stream, uses the
-    resulting file handle to construct an appropriate lines iterator, and
-    forwards it and the remaining arguments to *parse_db()*.
-
-    Args:
-        filepath (str): Path to the file that contains the database.
-        schemastring (str): See *parse_db()*
-        datatype_parsers (list): See *parse_db()*
-
-    Returns:
-        See *parse_db()*
-
-    Raises:
-        wsl.ParseError: If the parse failed.
-        Exception: Exceptions that result from the filesystem I/O while opening
-            or reading the file are not catched; they bubble up to the caller.
-    """
-    with open(filepath, "r", encoding="utf-8") as f:
-        lines = (line.rstrip('\n') for line in f)
-        return parse_db(lines, schemastring, datatype_parsers)

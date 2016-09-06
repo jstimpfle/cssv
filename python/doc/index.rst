@@ -50,7 +50,7 @@ type. Its advantage is having separate starting and closing delimiters.
     import wsl
 
     filepath = "db.wsl"
-    schema, tables = wsl.parse_db_file(filepath, schemastring=None, datatype_parsers=None)
+    schema, tables = wsl.parse_db(dbfilepath=filepath, schemastr=None, datatype_parsers=None)
     print(wsl.check_integrity(schema, tables))
     print(tables['person'])
     print(tables['parent'])
@@ -62,7 +62,7 @@ separately.
 
     import wsl
 
-    schemastring = """\
+    sch = """\
     DOMAIN Person Atom
     DOMAIN Comment String
     TABLE person Person Comment
@@ -78,7 +78,7 @@ separately.
     """
 
     lines = iter(db.splitlines())
-    schema, tables = wsl.parse_db(lines, schemastring, datatype_parsers=None)
+    schema, tables = wsl.parse_db(dbstr=db, schemastr=sch, datatype_parsers=None)
     print(wsl.check_integrity(schema, tables))
     print(tables['person'])
     print(tables['parent'])
@@ -168,4 +168,4 @@ API listing
 -----------
 
 .. automodule:: wsl
-   :members: parse_db, parse_db_file, parse_row, parse_values, parse_schema, parse_domain_decl, parse_key_decl, parse_reference_decl, check_integrity, Schema, format_db, format_row,
+   :members: parse_db, parse_row, parse_values, parse_schema, parse_domain_decl, parse_key_decl, parse_reference_decl, check_integrity, Schema, format_db, format_row,
