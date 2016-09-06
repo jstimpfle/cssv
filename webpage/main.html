@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>WSL - whitespace separated literals</title>
+<style>h2 { background: #E0E0F0; }</style>
+</head>
+<body>
+<h1>WSL - whitespace separated literals</h1>
+
+<p>WSL is an extremely simple and practical plain text format for <a
+href="https://en.wikipedia.org/wiki/Relational_model">relational data</a>.  In
+one sentence, WSL is basically notation for <a
+href="https://en.wikipedia.org/wiki/Datalog">Datalog</a>-style database tuples
+with a clean and canonical syntax supported by a schema language.</p>
+
+<p>It was designed to be accessible to format-agnostic text utilities like grep
+/ sed / awk and to be usable with version control systems like git, as well as
+to spezialized editors / sanitizers / query processors that understand the
+format and can take advantage of the schema information.</p>
+
+<p>The tradeoff is that WSL files usually have to be scanned completely, and
+therefore it's not suited for gigabytes of data. However most datasets are
+small, so there are many excellent applications. Examples are accounting,
+systems automation, data interchange, or web applications.</p>
+
+<h2>Example database</h2>
+
+<p>Here is an <a href="world_x.wsl.txt">an example WSL database</a>.
+
+<h2>Specification</h2>
+
+<p><a href="https://github.com/jstimpfle/wsl/blob/master/wsl.txt">The current specification</a></p>
+
+<h2>Implementations</h2>
+
+<p>A <a href="https://github.com/jstimpfle/wsl/blob/master/python/">python
+library</a>. The <a href="http://jstimpfle.de/projects/python-wsl/doc/">API</a>
+is in a stabilizing phase; the library will soon be converted into a standalone
+project. (linked API doc probably slightly outdated; check out project
+sources).</p>
+
+<p>A <a href="https://github.com/jstimpfle/relational-calculus">proof-of-concept
+implementation</a> of a query processor for a friendly logic query language,
+supported from the command-line.</p>
+
+<p>A fast <i>C library</i> is in the planning.</p>
+
+<p><a href="https://github.com/jstimpfle/wsl/blob/master/wslck">A basic sanitizer and integrity checker</a> (needs the python library to run).</p>
+
+<h2>Relational model</h2>
+
+<p>The relational model was popularized by Edward Codd in the 1970's. To me its
+essence is the insight that for persistent data <i>hierarchical
+representations</i> are often a poor choice; <i>flat tables</i> are often
+superior.</p>
+
+<p>Why? Hierarchical structures can be easily emulated with flat database tuples
+that reference each other. Conversely, hierarchical representations are just
+transformations of relational data that are opinionated about the access path
+through which information should be extracted from the database. One has to
+start at the top of a fixed hierarchiy and navigate all the way to the bottom.
+For example, a list of Employers each containing a list of his/her Employees.
+But what if one wants to start from a given Employee and find all the Employee's
+Employers? Too bad the hierarchies don't start with Employees, so one have to go
+through all Employers and see if the Employee is there, writing a ton of ad-hoc
+code (which breaks completely when the representation is changed).</p>
+
+<p>Similarly it's difficult to define the structure of what goes where, and
+which references resolve where, in a nested hierarchy. (The only widespread
+hierarchical schema language I know of is XML DTD, but I'm not planning to get
+more intimate with it...) If however we constrain to flat tables, it's easy to
+express and implement these integrity constraints in a simple schema language
+(like WSL's).</p>
+
+<p>An important fact isn't known by many people who equate the relational model
+with SQL: The relational model is closely connected to logic programming. It is
+a restricted version of first order logic, where each table in the schema is a
+predicate, and each database table is a universe where each predicate is true if
+and only if the corresponding database tuple exists in the table.</p>
+
+<p>For many logic queries, SQL is inconvenient. There are nicer more specialized
+query syntaxes like <a
+href="https://en.wikipedia.org/wiki/Domain_relational_calculus">DRC</a>.</p>
+
+<h2>WSL compared to JSON / S-Expressions / XML ...</h2>
+
+<p>WSL is a notation for <i>relational data</i> (flat tables). It does not
+directly serialize hierarchical data like JSON. However, much hierarchical data
+found in practice would better be represented as relational data. (See
+"Relational model").</p>
+
+<p>JSON misses a standardized schema language, and as a consequence it misses a
+nice lexical syntax (which would be easier with a schema) and support for data
+integrity and hygiene. It also has only few basic available datatypes (no
+support for extensions). So all in all JSON does not offer much support for data
+modelling. Its success came mostly from mapping easily to the basic built-in
+types of most dynamic languages.</p>
+
+<p>The frequently called-for S-Exprs are in my book just a less popular and less
+widely supported alternative to JSON. I'm not aware of significant technical
+differences.</p>
+
+<p>The situation is different with XML / DTD / XSLT, which do provide support
+for well-formedness beyond syntax. But they are syntactically and conceptually
+heavy; it's a real pain to get them to do the simplest things.</p>
+
+<h2>WSL compared to CSV</h2>
+
+<p>The most well-known format for storing relations as text is CSV. It is
+kind-of-portable, and, thanks to its simplicity, immensely popular and supported
+in almost all programming and application environments. It has a number of
+shortcomings, though. Compared to CSV, WSL offers</p>
+
+<ul>
+<li>Contains database (schema + many tables) instead of only one table
+<li>Built-in datatypes with sane semantics (as opposed to only strings)
+<li>Easy integration of custom datatypes offered by implementations
+<li>Per-datatype lexical syntax for readable, editable, and hackable databases
+<li>Unique and foreign keys supported
+<li>Type information to support query languages
+</ul>
+
+<h2>WSL compared to SQL dump files</h2>
+
+<p>The example database linked above was converted manually from <a
+href="world_x.sql.txt">this sample database</a>, which is a (probably not very
+portable) MySQL dump. (I haven't bothered to convert the JSON data in the
+<tt>CountryInfo</tt> table). It is freely available from the <a
+href="http://dev.mysql.com/doc/index-other.html">MySQL website</a>. This is the
+kind of data WSL was designed for.</p>
+
+<table border="1" style="text-align: center">
+<tr><td></td><th>SQL notation</th><th>WSL</th></tr>
+<tr><th>standardized and portable format</th><td>schema features usually not portable across databases</td><td>Yes (but not widespread)</td></tr>
+<tr><th>support for canonical data representation</th><td>weak (free-form syntax)</td><td>very strong (usually byte-precise serialization of tuples, ordering of tuples given by ordering of values)</td>
+<tr><th>read- and edit-friendly</th><td>Barely</td><td>Yes (almost no punctuation, strict syntax rules)</td></tr>
+<tr><th>scriptable / hackable</th><td>No</td><td>Yes (almost no punctuation, strict syntax rules)</td></tr>
+<tr><th>supports data integrity</th><td>Yes</td><td>Usually sufficiently (unique and foreign keys, custom datatypes)</td></tr>
+<tr><th>support for custom query languages</th><td>Rich type information</td><td>Rich and accessible type information</td></tr>
+</table>
+
+<p>The conversion was done with tedious regular expressions and manual selection
+and editing. Conversely, it should be easy to re-create an SQL file from the WSL
+database with vim or grep + sed. To be clean and hackable is one big point of
+WSL.</p>
+
+<h2>Design of WSL</h2>
+
+<h3>Omitting column names and NULL</h3>
+
+<p>An important decision was to encourage many tables with few columns, instead
+of few tables with many columns as is common with SQL and big datasets / heavy
+database servers.</p>
+
+<p>There are good reasons for this</p>
+
+<ul>
+<li>Practicality: At more than four or five columns, table rows become less practical to read and edit in a text editor.</li>
+<li>Normalization: tables with fewer columns tend to carry more relational
+meaning. In SQL culture, tables with more columns typically have many NULL-able
+attribute/tag/comment type columns and are quite denormalized (and so are, in
+particular, OUTER JOINS of such tables).</li>
+</ul>
+
+<p>One way in which WSL encourages fewer columns is leaving out column names.
+This forces the schema designer to communicate meaning of data with the names of
+<i>relations</i> (i.e. tables) and the relations' <i>domains</i> (i.e. column
+types) instead, which is desirable. This is supported by the separation of the
+concepts of datatypes (which can't be used directly as columns) and domains
+(which have to be declared as "instances" of datatypes with optional
+parameterization).</p>
+
+<p>Take as an example the definition of the <tt>City</tt> table.</p>
+
+<pre>
+% DOMAIN CityID Integer
+% DOMAIN CityName String
+% DOMAIN District String
+% DOMAIN Population Integer
+% TABLE City CityID CityName CountryCode District Population
+</pre>
+
+<p>Here we first create new meaningful domains from available datatypes. Now the
+meanings of a table's columns are clear from their domains and from the table
+name. Having many distinct domains is also really useful to avoid comparing
+apples with oranges in logic queries.</p>
+
+<p>Only rarely is this approach problematic, when a table has two columns of the
+same datatype and it's not super clear which column has what meaning in the
+relation. On the other hand, anybody who has written their share of SQL joins
+will know how painful it is to have to rename columns for each intermediate
+table because either the names clash or the context changed so the name is not
+appropriate anymore.</p>
+
+<p>Another means to keep the number of columns low is omitting NULL-able
+columns. The practical effects of this are exemplified by the conversion of the
+example SQL database to WSL. The <tt>Country</tt> table had to be split in two.
+The SQL version</p>
+
+<pre>
+CREATE TABLE `Country` (
+  `Code` char(3) NOT NULL DEFAULT '',
+  `Name` char(52) NOT NULL DEFAULT '',
+  `Capital` int(11) DEFAULT NULL,
+  `Code2` char(2) NOT NULL DEFAULT ''
+);
+</pre>
+
+<p>was translated to</p>
+
+<pre>
+% TABLE Country CountryCode CountryCode2 CountryName
+% TABLE Capital CountryCode CityID
+</pre>
+
+<p>(integrity constraints omitted). In this way the number of columns per table
+was reduced, normalization was improved, and the need for a NULL-able column
+went away.</p>
+
+<h2>Q & A</h2>
+
+<p><b>Q:</b> Isn't it impractical that strings cannot contain the '[' and ']' characters and yet there is no mechanism for escape sequences? What if my data legitimately contains those two characters?</p>
+
+<p><b>A:</b> That's only the default string type. The important concept is that
+arbitrary datatypes can be added by the user of an API implementation (the
+python library already offers that). The datatypes define their lexical syntax,
+like in perl6. I will also declare more "default sanctioned" datatypes and might
+include a C-like string after enough consideration.</p>
+
+<p>So why this choice for the *default* string type? I actually started out with
+escaping but noticed it's a lot of complexity that is rarely needed (not for my
+own use case, which is accounting, inventory, and some web apps). The advantage
+of omitting escaping is a nice syntactic guarantee so that simplistic scans
+(like seds, greps, or one-off parsers not using a library) can easily be sure
+they don't miss the field boundaries, and can break out the contained string
+literally.</p>
+
+</body>
+</html>
