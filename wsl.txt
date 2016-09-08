@@ -1,25 +1,26 @@
 Whitespace separated literals (WSL)
 ===================================
 
-As it turns out, it's hard to write specifications. This one is arguably
-terrible. As this specification stabilizes, I hope to find an easier to
+As it turns out, writing specifications is hard (as is everything). This
+one is probably terrible. As it stabilizes, I hope to find an easier to
 read form.
 
 WSL is a human and programmer friendly text format for relational
-databases. A sample database can be found under the project webpage at
+databases. A sample database can be found under the project webpage,
+http://jstimpfle.de/projects/wsl/main.html, at
 http://jstimpfle.de/projects/wsl/world_x.wsl.txt.
 
 WSL emphasizes normalization and the practical properties of plain text;
 in particular ease of editing, version-controlling, and querying with
 format-agnostic text tools. It aims to offer canonical data
-representations. NULL values and column names are omitted from its
-conception of the relational model to encourage tables with fewer
-columns and better semantics.
+representations. NULL values and first class column names are omitted
+from its conception of the relational model to encourage tables with
+fewer columns and better semantics.
 
-The definition of the WSL format has two parts; there is a language
-enabling the specification of relational schemata; and there is tuple
-notation which is also supported by the schema to enable a very clean
-and scripting-friendly lexical syntax.
+WSL can be explained two consist of roughly two parts; there is a
+language enabling the specification of relational schemata; and there is
+a tuple notation which takes advantage of schema information to enable a
+very clean and scripting-friendly lexical syntax.
 
 STRUCTURE
 =========
@@ -32,16 +33,15 @@ implementations can be concerned with only bytes.
 
 A WSL database is normally embedded in a single file or stream of bytes.
 Lines are terminated by single newline (0x0a) characters. The stream
-consists of an optional inline database schema followed by the
-relational data. In the following, the schema language is discussed.
-Following that, the notation of the relational data is discussed in
-DATABASE TUPLES.
+contains an optional inline database schema followed by the relational
+data. The schema language is discussed in DATABASE SCHEMA LANGUAGE.  The
+relational data notation is explained in DATABASE TUPLES.
 
 DATABASE SCHEMA LANGUAGE
 ========================
 
 The schema language supports declaration of user-defined domains (column
-data types), table, and database integrity constraints (primary and
+data types), tables, and database integrity constraints (primary and
 foreign keys). These are the most essential ingredients to relational
 databases. The following schema is taken from the database referenced
 above. The lines are prefixed with '%' as required for database inline
@@ -74,20 +74,18 @@ IDENTIFIERS
 -----------
 
 Identifiers are used at various places in the schema language; they must
-match the pattern [a-zA-Z][a-zA-Z0-9_]* and be separated from other
+match the pattern [a-zA-Z][a-zA-Z0-9_]* and must be separated from other
 tokens by space (0x20) characters.
 
 LEXICAL SYNTAX OF THE SCHEMA LANGUAGE
 -------------------------------------
 
-The lexical syntax of the schema language is designed to be very easy
-easy to parse. Each schema is encoded as a sequence of statements, where
-each statement stands on its own line.
-
-In inline database notation, each line must start with a '%' character
-but this is not part of the schema syntax discussed here. If the
-remaining line is not empty, it must be separated from the '%' character
-by one space character.
+A schema is encoded as a sequence of statements, where each statement
+stands on its own line. In inline database notation, each line must
+start with a '%' character. If the remaining line is not empty, it must
+be separated from the '%' character by one space character. The '%'
+prefix is not part of the schema language and must not be used when the
+schema is given separately.
 
 The first word (separated by a single following space, or the end of the
 line) is the statement type which decides how to interpret the content
@@ -102,58 +100,54 @@ DOMAIN DECLARATIONS
 Example:
 % DOMAIN IsOfficial Enum T F
 
-A DOMAIN line declares a new domain (column type). The new domain's
-values will often be interpreted as distinct from all other domains'
-values. Following the DOMAIN token, there are two more identifiers. The
-first identifier gives the name of the domain (here, `IsOfficial'). The
-second token gives the domain parser (here, the `Enum' domain parser),
-which is optionally parameterized by content following that second token
-(here, `T F').
+A DOMAIN line declares a new domain (column type).  After the DOMAIN
+token there come two more identifiers. The first identifier is the name
+of the new domain (here, "IsOfficial"). The second identifier is name of
+a domain parser (here, the `Enum' domain parser), which is optionally
+parameterized by the remaining line (here, "T F").
 
-There are a number of standard domain parsers which every conforming
-implementation must provide. These are discussed in the section
-"STANDARD DATATYPES AND PARSERS".
+Domain parsers take the remaining line and return domain *objects*,
+which in turn hold a value decoder and a value encoder (to decode /
+encode values in database tuples).
+
+There are a number of standard domain parsers that every conforming
+implementation must provide. These are discussed in STANDARD DATATYPES
+AND PARSERS.
+
+Since domain parsers roughly correspond to the (data-) types of the
+internal representation of database values, the terms "domain parser"
+and "(data-) type" are often used interchangeably.
 
 THE DOMAIN PARAMETERIZATION FACILITY
 ------------------------------------
 
-Warning: The following is confusing. Domain parsers return domain
-*objects*, which themselves hold a value parser and a value encoder (to
-parse / encode values in database tuples).
-
-What kind of domain object is returned from a domain parser can be
-controlled in the DOMAIN declaration line with the content of the line
-that follows the name of the domain parser.
-
-For example, in the line
-
-% DOMAIN IsOfficial Enum T F
-
-Here the parameterization is the text following the "Enum" parser name,
-i.e. "T F". In this case the domain parser returns a domain object for
-parsing and encoding only the values "T" and "F".
+As mentioned, what kind of domain object is returned from a domain
+parser is controlled by the remaining content of the DOMAIN declaration
+line.
 
 The parameterization syntax is different between different domain
-parsers, but there is a recommended default syntax. See RECOMMENDED
+parsers, but there is a recommended standard syntax. See RECOMMENDED
 DOMAIN PARSER PARAMETERIZATION SYNTAX.
 
-Things that can be controlled by parameterization are lexical syntax of
-values and constraints on the valid values. For example, the String type
-can be parameterized two recognize different types of string literals.
-Without parameterization, it recognizes [this style] without any
-escaping. But it can be made to parse [\x0a] as a string containing only
-a newline character. It could also be made to recognize "C style
-strings" instead. An example for value constraints is the Int parser
-which can be parameterized to allow only values in the range [42,1337].
+The idea is that two things that can be controlled by parameterization:
+lexical syntax and value constraints.
 
-These values of a domain have implementation-defined internal
-representation. For example, strings or integers. But the representation
-must not be parameterizable: it must be the same with all domain objects
-returned from the same parser. The rationale for this is that it should
-be possible to efficiently "cast" values from distinct domains created
-by the same parser to a most general version and to apply generic
-functions to them. In the case of a datatype with string representation,
-that might be comparison and string concatenation functions.
+An example of parameterization of lexical syntax is the String type
+which can be parameterized to recognize different styles of string
+literals, like the [default style] and the [C style].
+
+An example for parameterizationn of value constraints is the Int type
+which can be parameterized to allow only values in a specified range.
+
+The values of a domain have implementation-defined internal
+representation. For example, String values might be implemented by
+contiguous memory sequences, and Int values by machine integers. But the
+representation must not be parameterizable: it must be the same for all
+domain objects returned from the same parser. The rationale for this is
+that it should be possible to efficiently "cast" values from distinct
+domains created by the same parser to a most general version and to
+apply generic functions to them. In the case of a datatype with string
+representation, examples are be comparison or concatenation functions.
 
 RECOMMENDED DOMAIN PARSER PARAMETERIZATION SYNTAX
 -------------------------------------------------
@@ -162,9 +156,9 @@ The parameterization syntax should, if at all possible, follow the style
 
 % DOMAIN Foo Bar arg1 arg2 opt1=foo opt2=bar
 
-That is, space separated words, where each word is lowercase WSL
-identifier optionally followed by an equal sign and a user-chosen
-argument (preferably printable ASCII).
+That is, space separated words, where each word is lowercase identifier
+optionally followed by an equal sign and a user-chosen argument
+(preferably printable ASCII).
 
 UNIQUE KEY CONSTRAINTS
 ----------------------
@@ -172,32 +166,37 @@ Example:
 % TABLE Person PersonId Comment
 % KEY UniquePersonId Person P *
 
-A unique key constraint is declared by a line starting with KEY. After
-the KEY token, an identifier giving the name of the key constraint
-follows. After that come the name of a table and one more token for each
-column in the table. Each column token should be either "*" or an
-uppercase identifier. All identifiers in a KEY declaration line must be
-distinct. The interpretation is that those columns which are paired with
-identifiers (i.e. not "*") form the unique key. The example specifies
-that the Person table (which has two columns) is unique in the first
-column. That means that for any given Person there is no other Person
-with that PersonId.
+A unique key constraint is following a KEY schema statement. After the
+KEY token comes an identifier which is the identifying name of the key
+constraint. After that comes the name of a table and one more token for
+each column in the table. Each column token should be either "*" or an
+variable name (uppercase identifier). All identifiers in a KEY
+declaration line must be distinct. The interpretation is that those
+columns which are paired with variables form the unique key. The example
+specifies that the Person table (which has two columns) is unique in the
+first column. That means that for any given Person there is no other
+Person with that PersonId.
 
 FOREIGN KEY CONSTRAINTS
 -----------------------
 
 A foreign key constraint is declared by a line starting with the token
-REFERENCE. After the REFERENCE token, two table-column token sequences,
-as described in the UNIQUE KEY section, are expected. The two sequences
-must be separated by a => token. The identifiers must be distinct per
-sequence, and the same must be used in both sequences. For example,
+REFERENCE. After the REFERENCE token come the identifying naame of the
+constraint and two table-column token sequences, as described in the
+UNIQUE KEY section. These two sequences must be separated by a => token.
+The identifiers must be distinct per sequence, and the same must be used
+in both sequences. For example,
 
 % REFERENCE Friend1Person Friends P * => Person P * *
 % REFERENCE Friend2Person Friends * P => Person P * *
 
 declares one foreign key constraint from table Friends (first column) to
 Person (first column), and one foreign key constraint from Friends
-(second column) to Person (first column).
+(second column) to Person (first column). This
+
+% REFERENCE Friend2Person Friends P P => Person P * *
+
+is invalid since each variable can be used only once on each side. This
 
 % REFERENCE PermRepo Perm D R * * => Repo D R *
 
@@ -211,11 +210,11 @@ ID
 
 An ID is a simple one-word identifier. It is potentially a sequence of
 characters excluding space (0x20), '[' and ']' (0x5b and 0x5d) (and
-excepting the disallowed characters 0x00-0x1f, 0x7f). IDs are meant to
-serve as keys in relations. But they can help out for almost anything
-which does not contain space characters if no more suitable type is
-available. For example, URLs, dates, times. The ordering is the ordering
-of the binary representation.
+excepting the disallowed characters 0x00-0x1f, 0x7f).
+
+IDs are meant to serve as keys in relations. But they can help out for
+almost anything which does not contain space characters if no more
+suitable type is available. For example, URLs, dates, times.
 
 Parameterization:
 
@@ -223,11 +222,13 @@ Parameterization:
    [a-zA-Z][a-zA-Z0-9_]* are recognized.
  - Further parameterization to be defined.
 
+The value ordering is the lexical ordering of the UTF-8 encoded text.
+
 String
 ------
 
-Strings are arbitrary UTF-8 encoded text sequences, but typically hold a
-short sequence of words. Without parameterization, they are encoded as
+Strings are arbitrary UTF-8 encoded text, but typically hold a short
+sequence of words. Without parameterization, they are encoded as
 literals between square brackets in [this style] without any escaping.
 
 If the "escape" keyword appears in the parameterization, the following
@@ -239,8 +240,9 @@ backslash escape sequences are recognized:
 
 Other literal styles might be added, like "C style string literals".
 
-Many pattern matchers might be integrated in the future, for example one
-for email addresses or one matching a given regular expression.
+For value constraints, pattern matchers might be added in the future,
+for example one for email addresses or one matching user-specified
+regular expressions.
 
 Int
 ---
@@ -252,10 +254,9 @@ lexem can't be represented on the executing machine.
 Enum
 ----
 
-Simple enumeration type. Parameterization is simply a list of
-space-separated words. These are the possible values of the returned
-domain object. The ordering of these values is the order in the
-declaration.
+Simple enumeration type. Parameterization is the list of values
+contained in the enumeration. The ordering of these values is the order
+in the declaration.
 
 Bool
 ----
@@ -273,11 +274,7 @@ separated by exactly one space (0x20) character.
 The first such token is always the name of the table to which the row
 belongs.
 
-The remaining tokens are the values of the row (in order corresponding
-to the columns of the table). Each token is parsed according to the
-lexical rules created by the datatype of the current column. The set of
-available datatype is generally extensible by the user of a WSL
-impplementation. However, there are a few standard datatypes that every
-implementation must provide, and there is a certain minimalistic
-aesthetic that the lexical syntaxes of user-defined datatypes should
-conform to.
+The remaining tokens of the line are the values of the row (in order
+corresponding to the columns of the table). Each token is parsed
+according to the lexical rules created by the domain object of the
+current column.
