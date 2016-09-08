@@ -17,7 +17,7 @@ representations. NULL values and first class column names are omitted
 from its conception of the relational model to encourage tables with
 fewer columns and better semantics.
 
-WSL can be explained two consist of roughly two parts; there is a
+WSL can be explained as consisting of roughly two parts; there is a
 language enabling the specification of relational schemata; and there is
 a tuple notation which takes advantage of schema information to enable a
 very clean and scripting-friendly lexical syntax.
