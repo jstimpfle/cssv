@@ -11,7 +11,7 @@
 <p>WSL is an extremely simple and practical plain text format for <a
 href="https://en.wikipedia.org/wiki/Relational_model">relational data</a>.  In
 one sentence, WSL is basically notation for <a
-href="https://en.wikipedia.org/wiki/Datalog">Datalog</a>-style database tuples
+href="https://en.wikipedia.org/wiki/Datalog">Datalog</a> style database tuples
 with a clean and canonical syntax supported by a schema language.</p>
 
 <p>It was designed to be accessible to format-agnostic text utilities like grep
@@ -55,22 +55,21 @@ essence is the insight that for persistent data <i>hierarchical
 representations</i> are often a poor choice; <i>flat tables</i> are often
 superior.</p>
 
-<p>Why? Hierarchical structures can easily be emulated with flat database
-tuples that reference each other. On the other hand, hierarchical
-representations are just transformations of relational data that are
-opinionated about the access path through which information should be extracted
-from the database. One has to start at the top of a fixed hierarchy and
-navigate all the way to the bottom.  For example, a list of Employers each
-containing a list of his/her Employees.  But what if one wants to start from a
-given Employee and find all the Employee's Employers? Too bad the hierarchies
-don't start with Employees, so one have to go through all Employers and see if
-the Employee is there, writing a ton of ad-hoc code (which breaks completely
-when the representation is changed).</p>
+<p>Why? Hierarchical structures can easily be emulated with flat database tuples
+that reference each other. On the other hand, hierarchical representations are
+just transformations of relational data that are opinionated about the access
+path through which information should be extracted from the database. One has to
+start at the top of a fixed hierarchy and navigate all the way to the bottom.
+For example, a list of Employers each containing a list of his/her Employees.
+But what if one wants to start from a given Employee and find all the Employee's
+Employers? Too bad the hierarchies don't start with Employees, so one has to go
+through all Employers and see if the Employee is there, writing a ton of ad-hoc
+code (which breaks completely when the representation is changed).</p>
 
 <p>Similarly it's difficult to define the structure of what goes where, and
 which references resolve where, in a nested hierarchy. (The only widespread
 hierarchical schema language I know of is XML DTD, but I'm not planning to get
-more intimate with it...) If however we constrain to flat tables, it's easy to
+more intimate with it...). If however we constrain to flat tables, it's easy to
 express and implement these integrity constraints in a simple schema language
 (like WSL's).</p>
 
@@ -104,7 +103,7 @@ differences.</p>
 
 <p>The situation is different with XML / DTD / XSLT, which do provide support
 for well-formedness beyond syntax. But they are syntactically and conceptually
-heavy; it's a real pain to get them to do the simplest things.</p>
+heavy; it's a pain to get them to do the simplest things.</p>
 
 <h2>WSL compared to CSV</h2>
 
@@ -131,6 +130,10 @@ portable) MySQL dump. (I haven't bothered to convert the JSON data in the
 href="http://dev.mysql.com/doc/index-other.html">MySQL website</a>. This is the
 kind of data WSL was designed for.</p>
 
+<p>The comparison to dump files might appear silly, but the following tables
+gives many reasons why dump files don't do and illustrates WSL's design
+goals.</p>
+
 <table border="1" style="text-align: center">
 <tr><td></td><th>SQL notation</th><th>WSL</th></tr>
 <tr><th>standardized and portable format</th><td>schema features usually not portable across databases</td><td>Yes (but not widespread)</td></tr>
@@ -146,13 +149,13 @@ and editing. Conversely, it should be easy to re-create an SQL file from the WSL
 database with vim or grep + sed. To be clean and hackable is one big point of
 WSL.</p>
 
-<h2>Design of WSL</h2>
+<h2>Design</h2>
 
 <h3>Omitting column names and NULL</h3>
 
-<p>An important decision was to encourage many tables with few columns, instead
-of few tables with many columns as is common with SQL and big datasets / heavy
-database servers.</p>
+<p>An important design decision is to encourage many tables with few columns,
+instead of few tables with many columns as is common with SQL and big datasets /
+heavy database servers.</p>
 
 <p>There are good reasons for this</p>
 
@@ -195,7 +198,7 @@ table because either the names clash or the context changed so the name is not
 appropriate anymore.</p>
 
 <p>Another means to keep the number of columns low is omitting NULL-able
-columns. The practical effects of this are exemplified by the conversion of the
+columns. The practical effects of this are illustrated by the conversion of the
 example SQL database to WSL. The <tt>Country</tt> table had to be split in two.
 The SQL version</p>
 
@@ -218,24 +221,6 @@ CREATE TABLE `Country` (
 <p>(integrity constraints omitted). In this way the number of columns per table
 was reduced, normalization was improved, and the need for a NULL-able column
 went away.</p>
-
-<h2>Q & A</h2>
-
-<p><b>Q:</b> Isn't it impractical that strings cannot contain the '[' and ']' characters and yet there is no mechanism for escape sequences? What if my data legitimately contains those two characters?</p>
-
-<p><b>A:</b> That's only the default string type. The important concept is that
-arbitrary datatypes can be added by the user of an API implementation (the
-python library already offers that). The datatypes define their lexical syntax,
-like in perl6. I will also declare more "default sanctioned" datatypes and might
-include a C-like string after enough consideration.</p>
-
-<p>So why this choice for the *default* string type? I actually started out with
-escaping but noticed it's a lot of complexity that is rarely needed (not for my
-own use case, which is accounting, inventory, and some web apps). The advantage
-of omitting escaping is a nice syntactic guarantee so that simplistic scans
-(like seds, greps, or one-off parsers not using a library) can easily be sure
-they don't miss the field boundaries, and can break out the contained string
-literally.</p>
 
 </body>
 </html>
