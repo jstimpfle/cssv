@@ -1,14 +1,14 @@
-% DOMAIN CityID Integer
+% DOMAIN CityID Int
 % DOMAIN CityName String
-% DOMAIN CountryCode Atom
-% DOMAIN CountryCode2 Atom
+% DOMAIN CountryCode ID
+% DOMAIN CountryCode2 ID
 % DOMAIN CountryName String
 % DOMAIN District String
 % DOMAIN Language String
 % DOMAIN IsOfficial Enum T F
-% COMMENT not implemented: DOMAIN Percentage Decimal scale=1 range=[0.0,100.0]
-% DOMAIN Percentage Atom
-% DOMAIN Population Integer
+% # not implemented: DOMAIN Percentage Decimal scale=1 range=[0.0,100.0]
+% DOMAIN Percentage ID
+% DOMAIN Population Int
 % TABLE City CityID CityName CountryCode District Population
 % TABLE Country CountryCode CountryCode2 CountryName
 % TABLE Capital CountryCode CityID
