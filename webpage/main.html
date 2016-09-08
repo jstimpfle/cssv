@@ -55,16 +55,17 @@ essence is the insight that for persistent data <i>hierarchical
 representations</i> are often a poor choice; <i>flat tables</i> are often
 superior.</p>
 
-<p>Why? Hierarchical structures can be easily emulated with flat database tuples
-that reference each other. Conversely, hierarchical representations are just
-transformations of relational data that are opinionated about the access path
-through which information should be extracted from the database. One has to
-start at the top of a fixed hierarchiy and navigate all the way to the bottom.
-For example, a list of Employers each containing a list of his/her Employees.
-But what if one wants to start from a given Employee and find all the Employee's
-Employers? Too bad the hierarchies don't start with Employees, so one have to go
-through all Employers and see if the Employee is there, writing a ton of ad-hoc
-code (which breaks completely when the representation is changed).</p>
+<p>Why? Hierarchical structures can easily be emulated with flat database
+tuples that reference each other. On the other hand, hierarchical
+representations are just transformations of relational data that are
+opinionated about the access path through which information should be extracted
+from the database. One has to start at the top of a fixed hierarchy and
+navigate all the way to the bottom.  For example, a list of Employers each
+containing a list of his/her Employees.  But what if one wants to start from a
+given Employee and find all the Employee's Employers? Too bad the hierarchies
+don't start with Employees, so one have to go through all Employers and see if
+the Employee is there, writing a ton of ad-hoc code (which breaks completely
+when the representation is changed).</p>
 
 <p>Similarly it's difficult to define the structure of what goes where, and
 which references resolve where, in a nested hierarchy. (The only widespread
@@ -159,8 +160,8 @@ database servers.</p>
 <li>Practicality: At more than four or five columns, table rows become less practical to read and edit in a text editor.</li>
 <li>Normalization: tables with fewer columns tend to carry more relational
 meaning. In SQL culture, tables with more columns typically have many NULL-able
-attribute/tag/comment type columns and are quite denormalized (and so are, in
-particular, OUTER JOINS of such tables).</li>
+attribute/tag/comment type columns and are quite denormalized (and so are in
+particular OUTER JOINS of such tables).</li>
 </ul>
 
 <p>One way in which WSL encourages fewer columns is leaving out column names.
