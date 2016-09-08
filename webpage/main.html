@@ -8,6 +8,29 @@
 <body>
 <h1>WSL - whitespace separated literals</h1>
 
+<pre style="float: left; margin: 0 2em;">
+% DOMAIN CityID Int
+% DOMAIN CityName String
+% DOMAIN CountryCode ID
+% TABLE City CityID CityName CountryCode District
+% TABLE Country CountryCode CountryCode2 CountryName
+% TABLE Capital CountryCode CityID
+% TABLE Language CountryCode Language IsOfficial
+% ...
+
+Country ABW AW [Aruba]
+Country AFG AF [Afghanistan]
+Country AGO AO [Angola]
+Country AIA AI [Anguilla]
+Country ALB AL [Albania]
+Country AND AD [Andorra]
+Country ANT AN [Netherlands Antilles]
+Country ARE AE [United Arab Emirates]
+Country ARG AR [Argentina]
+Country ARM AM [Armenia]
+...
+</pre>
+
 <p>WSL is an extremely simple and practical plain text format for <a
 href="https://en.wikipedia.org/wiki/Relational_model">relational data</a>.  In
 one sentence, WSL is basically notation for <a
@@ -23,6 +46,8 @@ format and can take advantage of the schema information.</p>
 therefore it's not suited for gigabytes of data. However most datasets are
 small, so there are many excellent applications. Examples are accounting,
 systems automation, data interchange, or web applications.</p>
+
+<div style="clear: both"></div>
 
 <h2>Example database</h2>
 
