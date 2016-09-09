@@ -31,11 +31,11 @@ Country ARM AM [Armenia]
 ...
 </pre>
 
-<p>WSL is an extremely simple and practical plain text format for <a
+<p>WSL is a clean and practical plain text format for <a
 href="https://en.wikipedia.org/wiki/Relational_model">relational data</a>.  In
-one sentence, WSL is basically notation for <a
+one sentence, WSL is notation for <a
 href="https://en.wikipedia.org/wiki/Datalog">Datalog</a> style database tuples
-with a clean and canonical syntax supported by a schema language.</p>
+with syntax that is supported by a schema language.</p>
 
 <p>It was designed to be accessible to format-agnostic text utilities like grep
 / sed / awk and to be usable with version control systems like git, as well as
@@ -72,6 +72,24 @@ supported from the command-line.</p>
 
 <p><a href="https://github.com/jstimpfle/python-wsl/blob/master/wslck">A basic
 sanitizer and integrity checker</a> (needs the python library to run).</p>
+
+<h2>Practical benefits</h2>
+
+<ul>
+<li>Take advantage of textual storage: version control data, edit with the
+editor of your choice, easy exchange over text-protocols like email, excellent
+scriptability.</li>
+<li>Take advantage of domain-specific and user-defined lexers for minimal
+syntactical overhead (better readability, better scriptability, canonic
+representation...).</li>
+<li>Use the python3 implementation (more to come) to parse or encode data
+directly as values in domain-specific internal representation, in a single line
+of code. Plumbing of conversion and validator functions is already done for
+you, so no boilerplate. The set of built-in datatypes with convenient
+parameterizable syntax will grow larger soon.</li>
+<li>Use convenient schema-supported query syntaxes (to come) to slice and dice
+data, and postprocess conveniently with other time-proven text tools.</li>
+</ul>
 
 <h2>Relational model</h2>
 
