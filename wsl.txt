@@ -1,41 +1,37 @@
 Whitespace separated literals (WSL)
 ===================================
 
-As it turns out, writing specifications is hard (as is everything). This
-one is probably terrible. As it stabilizes, I hope to find an easier to
-read form.
+It turns out that writing specifications is hard (as are most things).
+This one is probably terrible. As it stabilizes, I hope to find a better
+form.
 
 WSL is a human and programmer friendly text format for relational
-databases. A sample database can be found under the project webpage,
-http://jstimpfle.de/projects/wsl/main.html, at
-http://jstimpfle.de/projects/wsl/world_x.wsl.txt.
+databases. WSL's design goals are explained in-depth on the project
+webpage at http://jstimpfle.de/projects/wsl/main.html. A sample database
+can be found at http://jstimpfle.de/projects/wsl/world_x.wsl.txt.
 
-WSL emphasizes normalization and the practical properties of plain text;
-in particular ease of editing, version-controlling, and querying with
-format-agnostic text tools. It aims to offer canonical data
-representations. NULL values and first class column names are omitted
-from its conception of the relational model to encourage tables with
-fewer columns and better semantics.
-
-WSL can be explained as consisting of roughly two parts; there is a
-language enabling the specification of relational schemata; and there is
-a tuple notation which takes advantage of schema information to enable a
-very clean and scripting-friendly lexical syntax.
+WSL can be explained as roughly consisting of two parts: 1) a schema
+language and 2) a database tuple notation which takes advantage of
+schema information to enable a very clean and scripting-friendly lexical
+syntax.
 
 STRUCTURE
 =========
 
 A convenient way to represent Unicode is needed for practical reasons.
-WSL databases must be UTF-8 encoded; no other encodings are supported.
-http://utf8everywhere.org gives many good reasons for UTF-8 only. The
-most important benefit is that syntactical specification and
-implementations can be concerned with only bytes.
+To make that easy WSL databases must be UTF-8 encoded; no other
+encodings are supported. http://utf8everywhere.org gives many good
+reasons for UTF-8 only. The most important benefit is that syntactical
+specification and implementations can be concerned with only bytes.
 
 A WSL database is normally embedded in a single file or stream of bytes.
 Lines are terminated by single newline (0x0a) characters. The stream
 contains an optional inline database schema followed by the relational
 data. The schema language is discussed in DATABASE SCHEMA LANGUAGE. The
 relational data notation is explained in DATABASE TUPLES.
+
+(Obvious variations are files or streams of only database tuples with a
+separately provided schema, or databases split into one file per table).
 
 DATABASE SCHEMA LANGUAGE
 ========================
@@ -44,8 +40,9 @@ The schema language supports declaration of user-defined domains (column
 data types), tables, and database integrity constraints (primary and
 foreign keys). These are the most essential ingredients to relational
 databases. The following schema is taken from the database referenced
-above. The lines are prefixed with '%' as required for database inline
-notation.
+above. The lines are prefixed with '%' as required for inline notation.
+(The prefixes are not part of the language, and omitted if the schema is
+provided separately).
 
 Example:
 
@@ -77,6 +74,9 @@ Identifiers are used at various places in the schema language; they must
 match the pattern [a-zA-Z][a-zA-Z0-9_]* and must be separated from other
 tokens by space (0x20) characters.
 
+An "uppercase identifier" is an identifier without lowercase characters.
+A "lowercase identifier" is an identifier without uppercase characters.
+
 LEXICAL SYNTAX OF THE SCHEMA LANGUAGE
 -------------------------------------
 
@@ -87,12 +87,12 @@ be separated from the '%' character by one space character. The '%'
 prefix is not part of the schema language and must not be used when the
 schema is given separately.
 
-The first word (separated by a single following space, or the end of the
-line) is the statement type which decides how to interpret the content
-of the line after it. For extensibilty, if a statement type is not
-known, the line is ignored. The statement types defined here are DOMAIN,
-TABLE, KEY, and REFERENCE. Their respective syntaxes are discussed in
-the following.
+The first identifier (separated by a single following space, or the end
+of the line) is the statement type which decides how to interpret the
+content of the line after it. For extensibilty, if a statement type is
+not known, the line is ignored. The statement types defined here are
+DOMAIN, TABLE, KEY, and REFERENCE. Their respective syntaxes are
+discussed in the following.
 
 DOMAIN DECLARATIONS
 -------------------
@@ -102,21 +102,24 @@ Example:
 
 A DOMAIN line declares a new domain (column type). After the DOMAIN
 token there come two more identifiers. The first identifier is the name
-of the new domain (here, "IsOfficial"). The second identifier is name of
-a domain parser (here, the `Enum' domain parser), which is optionally
-parameterized by the remaining line (here, "T F").
+of the new domain (here, "IsOfficial"). The second identifier is the
+name of a domain parser (here, the `Enum' domain parser) which is
+optionally parameterized by the remaining line (here, "T F").
 
 Domain parsers take the remaining line and return domain *objects*,
 which in turn hold a value decoder and a value encoder (to decode /
 encode values in database tuples).
 
-There are a number of standard domain parsers that every conforming
+Since domain parsers roughly correspond to the (data-) types of the
+internal representations of database values, the terms "domain parser"
+and "(data-) type" are often used interchangeably.
+
+There are a number of standard types that every conforming
 implementation must provide. These are discussed in STANDARD DATATYPES
 AND PARSERS.
 
-Since domain parsers roughly correspond to the (data-) types of the
-internal representation of database values, the terms "domain parser"
-and "(data-) type" are often used interchangeably.
+Library implementations must allow users of the API to provide custom
+datatypes for flexibility.
 
 DOMAIN PARAMETERIZATION
 -----------------------
@@ -125,29 +128,29 @@ As mentioned, what kind of domain object is returned from a domain
 parser is controlled by the remaining characters in the DOMAIN
 declaration line. This is called *domain parameterization*.
 
-The parameterization syntax is different between different domain
-parsers, but there is a recommended standard syntax. See RECOMMENDED
-DOMAIN PARSER PARAMETERIZATION SYNTAX.
+The parameter syntax is different between different domain parsers, but
+there is a recommended standard syntax. See RECOMMENDED DOMAIN PARSER
+PARAMETER SYNTAX.
 
-The idea is that two things can be controlled by parameterization:
-lexical syntax and value constraints.
+There are two intended use cases for parameterization: specifying
+lexical syntax and specifying value constraints.
 
-An example for parameterization of lexical syntax is the "String" type
-which can be parameterized to recognize different styles of string
-literals, like the [default style] and the "C style".
+An example for parameterization of lexical syntax is the standard
+"String" type which can be parameterized to recognize different styles
+of string literals, like the [default style] and the "C style".
 
-An example for parameterizationn of value constraints is the "Int" type
+An example for parameterization of value constraints is the "Int" type
 which can be parameterized to allow only values in a specified range.
 
-The values of a domain have implementation-defined internal
-representation. For example, String values might be implemented by
-contiguous memory sequences, and Int values by machine integers. But the
-representation must not be parameterizable: it must be the same for all
-domain objects returned from the same parser. The rationale for this is
-that it should be possible to efficiently "cast" values from distinct
-domains created by the same parser to a most general version and to
-apply generic functions to them. In the case of a datatype with string
-representation, examples are be comparison or concatenation functions.
+Database values have domain dependent internal representation. For
+example, String values might be implemented by contiguous memory
+sequences, and Int values by machine integers. But the representation
+must not be parameterizable: it must be the same for all domain objects
+returned from the same parser. The rationale for this is that it should
+be possible to efficiently "cast" values from distinct domains created
+by the same parser to a most general version and to apply generic
+functions to them. In the case of a datatype with string representation,
+examples are comparison or concatenation functions.
 
 RECOMMENDED DOMAIN PARSER PARAMETERIZATION SYNTAX
 -------------------------------------------------
@@ -156,9 +159,9 @@ The parameterization syntax should if possible follow the style
 
 % DOMAIN Foo Bar arg1 arg2 opt1=foo opt2=bar
 
-That is, space separated words, where each word is lowercase identifier
-optionally followed by an equal sign and a user-chosen argument
-(preferably printable ASCII).
+That is, space separated words, where each word is a lowercase
+identifier optionally followed by an equal sign and a user-chosen
+argument with suitable syntax (preferably printable ASCII).
 
 UNIQUE KEY CONSTRAINTS
 ----------------------
@@ -208,13 +211,11 @@ STANDARD DATATYPES
 ID
 --
 
-An ID is a simple one-word identifier. It is potentially a sequence of
-characters excluding space (0x20), '[' and ']' (0x5b and 0x5d) (and
-excepting the disallowed characters 0x00-0x1f, 0x7f).
-
-IDs are meant to serve as keys in relations. But they can help out for
-almost anything which does not contain space characters if no more
-suitable type is available. For example, URLs, dates, times.
+An ID is a simple one-word identifier. There are no delimiters (apart
+from the surrounding spaces) and there is no escaping. IDs are meant to
+serve as keys in relations. But they can help out for almost anything
+which does not contain space characters if no more suitable type is
+available, for example URLs or numbers.
 
 Parameterization:
 
@@ -222,7 +223,8 @@ Parameterization:
    [a-zA-Z][a-zA-Z0-9_]* are recognized.
  - Further parameterization to be defined.
 
-The value ordering is the lexical ordering of the UTF-8 encoded text.
+The value ordering is the lexical ordering of the bytes that make up the
+UTF-8 encoded ID.
 
 String
 ------
@@ -254,21 +256,48 @@ lexem can't be represented on the executing machine.
 Enum
 ----
 
-Simple enumeration type. Parameterization is the list of values
-contained in the enumeration. The ordering of these values is the order
-in the declaration.
+Simple enumeration type. Parameterization is the space separated list of
+identifiers that are part of the enumeration. The ordering of these
+values is the order in the declaration.
 
 Bool
 ----
 
 Boolean type. No parameterization is defined; the true and false values
-are represented by literal "true" and "false" (sans quotes).
+are represented by literal "true" and "false" (without quotes).
+
+Decimal
+-------
+
+TODO: Is making this complexity required warranted?
+TODO: Specify more precisely.
+
+Represents numbers in decimal (for example 10.1) with optional unit
+suffix (for example 1.5kg), fixed number of decimal places and optional
+left padded zeroes. Multiple unit levels are possible, for example
+1h 03m 34.05s.
+
+Parameterization: A format string like "{1000}h{060}m{060.2}s". This
+would mean:
+
+    "{1000}": values from 0-999
+    "{060}": values from 0-59, zero padded to 2 places (as in 59)
+    "{060.2}s": values from 0-59, zero padded, with 2 places of precision.
+
+A "{}" means any number without zero-padding. Zero-padding is only
+possible if a value range is given. "{.03}" means "any number without
+padding with 2 places of precision". Only the rightmost number can have
+a precision indicated.
+
+No digits are allowed right next to a bracket.
+
+The obvious ordering rules apply.
 
 DATABASE TUPLES
 ===============
 
 After the header, each row of the data is given on a single line
-(extinct of newline characters) as a sequence of tokens which are
+(extinct of newline characters) as a sequence of tokens that are
 separated by exactly one space (0x20) character.
 
 The first such token is always the name of the table to which the row

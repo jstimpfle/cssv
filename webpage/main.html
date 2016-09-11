@@ -32,20 +32,18 @@ Country ARM AM [Armenia]
 </pre>
 
 <p>WSL is a clean and practical plain text format for <a
-href="https://en.wikipedia.org/wiki/Relational_model">relational data</a>.  In
-one sentence, WSL is notation for <a
-href="https://en.wikipedia.org/wiki/Datalog">Datalog</a> style database tuples
-with syntax that is supported by a schema language.</p>
+href="https://en.wikipedia.org/wiki/Relational_model">relational data</a>. In
+one sentence, WSL is a schema language and a notation for typed database tuples
+with schema-supported syntax.</p>
 
 <p>It was designed to be accessible to format-agnostic text utilities like grep
-/ sed / awk and to be usable with version control systems like git, as well as
-to spezialized editors / sanitizers / query processors that understand the
-format and can take advantage of the schema information.</p>
+/ sed / awk , as well as to spezialized editors / sanitizers / query processors
+that understand the format and can take advantage of the schema information.</p>
 
 <p>The tradeoff is that WSL files usually have to be scanned completely, and
 therefore it's not suited for gigabytes of data. However most datasets are
-small, so there are many excellent applications. Examples are accounting,
-systems automation, data interchange, or web applications.</p>
+small, so there are many excellent applications. Examples are systems automation
+or web applications.</p>
 
 <div style="clear: both"></div>
 
@@ -59,10 +57,14 @@ systems automation, data interchange, or web applications.</p>
 
 <h2>Implementations</h2>
 
-<p>A <a href="https://github.com/jstimpfle/python-wsl/">python
-library</a>. The <a href="http://jstimpfle.de/projects/python-wsl/doc/">API</a>
-is in a stabilizing phase. (Linked API doc probably slightly outdated; check out
-project sources).</p>
+<p>A <a href="https://github.com/jstimpfle/python-wsl/">python library</a>. The
+API is in a stabilizing phase. To be able to try out the examples from the <a
+href="http://jstimpfle.de/projects/python-wsl/doc/">documentation</a>, you need
+<tt>pip3</tt> (on Debian systems, pip3 is in the <tt>python3-pip</tt> package) ;
+then simply type <tt style="border: 1px dotted gray">pip3 install --user
+wsl</tt> as a normal user to install wsl into your home directory. Alternatively
+you can avoid the install by pointing your PYTHONPATH to a local clone of the
+github repo.</p>
 
 <p>A <a href="https://github.com/jstimpfle/relational-calculus">proof-of-concept
 implementation</a> of a query processor for a friendly logic query language,
