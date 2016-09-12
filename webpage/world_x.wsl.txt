@@ -13,10 +13,10 @@
 % TABLE Country CountryCode CountryCode2 CountryName
 % TABLE Capital CountryCode CityID
 % TABLE Language CountryCode Language IsOfficial Percentage
-% KEY Capital CC *
-% REFERENCE Capital CC * => Country CC * *
-% REFERENCE Capital * CID => City CID * * * *
-% REFERENCE Language CC * * * => Country CC * *
+% KEY CountryOfCapital Capital CC *
+% REFERENCE CountryOfCapital Capital CC * => Country CC * *
+% REFERENCE CityOfCapital Capital * CID => City CID * * * *
+% REFERENCE CountryOfLanguage Language CC * * * => Country CC * *
 
 Country ABW AW [Aruba]
 Country AFG AF [Afghanistan]
