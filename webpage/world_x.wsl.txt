@@ -14,6 +14,8 @@
 % TABLE Capital CountryCode CityID
 % TABLE Language CountryCode Language IsOfficial Percentage
 % KEY CountryOfCapital Capital CC *
+% KEY Country Country C * * *
+% KEY City City C * * * *
 % REFERENCE CountryOfCapital Capital CC * => Country CC * *
 % REFERENCE CityOfCapital Capital * CID => City CID * * * *
 % REFERENCE CountryOfLanguage Language CC * * * => Country CC * *
