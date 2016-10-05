@@ -57,14 +57,7 @@ or web applications.</p>
 
 <h2>Implementations</h2>
 
-<p>A <a href="https://github.com/jstimpfle/python-wsl/">python library</a>. The
-API is in a stabilizing phase. To be able to try out the examples from the <a
-href="http://jstimpfle.de/projects/python-wsl/doc/">documentation</a>, you need
-<tt>pip3</tt> (on Debian systems, pip3 is in the <tt>python3-pip</tt> package) ;
-then simply type <tt style="border: 1px dotted gray">pip3 install --user
-wsl</tt> as a normal user to install wsl into your home directory. Alternatively
-you can avoid the install by pointing your PYTHONPATH to a local clone of the
-github repo.</p>
+<p>A <a href="https://github.com/jstimpfle/python-wsl/">python library</a>.</p>
 
 <p>A <a href="https://github.com/jstimpfle/relational-calculus">proof-of-concept
 implementation</a> of a query processor for a friendly logic query language,
@@ -78,19 +71,16 @@ sanitizer and integrity checker</a> (needs the python library to run).</p>
 <h2>Practical benefits</h2>
 
 <ul>
-<li>Take advantage of textual storage: version controlling, editing with the
-editor of your choice, reliable and convenient data exchange, good
-scriptability.</li>
-<li>Take advantage of domain-specific and user-defined lexers for minimal
-syntactic overhead (better readability, better scriptability, canonic
-representation...).</li>
-<li>Take advantage of schema information: test data integrity, build tooling
-and query languages.</li>
+<li>Textual storage: version controlling, editing with the editor of your
+choice, reliable and convenient data exchange, good scriptability.</li>
+<li>Domain-specific and user-defined lexers: minimal syntactic overhead (better
+readability, better scriptability, canonic representation...).</li>
+<li>Schema supported: test data integrity, build tooling and query
+languages.</li>
 <li>Use the python3 implementation (more to come) to parse or format data
 directly as values in domain-specific internal representation, in a single line
-of code. Plumbing of conversion and validator functions is already done for you,
-so no boilerplate. The set of built-in datatypes with convenient parameterizable
-syntax will grow larger soon.</li>
+of code. Plumbing of conversion and validator functions and reference following
+code is already done for you, so no boilerplate.</li>
 </ul>
 
 <h2>Relational model</h2>
