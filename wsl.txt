@@ -1,37 +1,35 @@
 Whitespace separated literals (WSL)
 ===================================
 
-It turns out that writing specifications is hard (as are most things).
-This one is probably terrible. As it stabilizes, I hope to find a better
-form.
-
 WSL is a human and programmer friendly text format for relational
 databases. WSL's design goals are explained in-depth on the project
 webpage at http://jstimpfle.de/projects/wsl/main.html. A sample database
 can be found at http://jstimpfle.de/projects/wsl/world_x.wsl.txt.
 
-WSL can be explained as roughly consisting of two parts: 1) a schema
-language and 2) a database tuple notation which takes advantage of
-schema information to enable a very clean and scripting-friendly lexical
-syntax.
+WSL can be explained as consisting of two parts: 1) a schema language
+and 2) a database tuple notation which takes advantage of schema
+information to enable a very clean and scripting-friendly lexical
+syntax. Other extensions, for example query languages, can be added, but
+are not part of this specification.
+
 
 STRUCTURE
 =========
 
 A convenient way to represent Unicode is needed for practical reasons.
-To make that easy WSL databases must be UTF-8 encoded; no other
-encodings are supported. http://utf8everywhere.org gives many good
-reasons for UTF-8 only. The most important benefit is that syntactical
-specification and implementations can be concerned with only bytes.
+Therefore WSL databases must be UTF-8 encoded; no other encodings are
+supported. http://utf8everywhere.org gives many good reasons for UTF-8
+only.
 
-A WSL database is normally embedded in a single file or stream of bytes.
-Lines are terminated by single newline (0x0a) characters. The stream
-contains an optional inline database schema followed by the relational
-data. The schema language is discussed in DATABASE SCHEMA LANGUAGE. The
-relational data notation is explained in DATABASE TUPLES.
+A WSL database is normally contained in a single file or stream of
+bytes. Lines are terminated by single newline (0x0a) characters. The
+stream contains an optional inline database schema followed by the
+relational data. The schema language is discussed in DATABASE SCHEMA
+LANGUAGE. The relational data notation is explained in DATABASE TUPLES.
 
 (Obvious variations are files or streams of only database tuples with a
 separately provided schema, or databases split into one file per table).
+
 
 DATABASE SCHEMA LANGUAGE
 ========================
@@ -41,10 +39,8 @@ data types), tables, and database integrity constraints (primary and
 foreign keys). These are the most essential ingredients to relational
 databases. The following schema is taken from the database referenced
 above. The lines are prefixed with '%' as required for inline notation.
-(The prefixes are not part of the language, and omitted if the schema is
-provided separately).
-
-Example:
+(The prefixes are not part of the schema language. They are omitted if
+the schema is provided separately).
 
 % DOMAIN CityID Integer
 % DOMAIN CityName String
@@ -82,8 +78,8 @@ LEXICAL SYNTAX OF THE SCHEMA LANGUAGE
 
 A schema is encoded as a sequence of statements, where each statement
 stands on its own line. In inline database notation, each line must
-start with a '%' character. If the remaining line is not empty, it must
-be separated from the '%' character by one space character. The '%'
+start with a '%' character. If the rest of the line is not empty, it
+must be separated from the '%' character by one space character. The '%'
 prefix is not part of the schema language and must not be used when the
 schema is given separately.
 
@@ -98,6 +94,7 @@ DOMAIN DECLARATIONS
 -------------------
 
 Example:
+
 % DOMAIN IsOfficial Enum T F
 
 A DOMAIN line declares a new domain (column type). After the DOMAIN
@@ -114,9 +111,14 @@ Since domain parsers roughly correspond to the (data-) types of the
 internal representations of database values, the terms "domain parser"
 and "(data-) type" are often used interchangeably.
 
-There are a number of standard types that every conforming
-implementation must provide. These are discussed in STANDARD DATATYPES
-AND PARSERS.
+Each domain parser implementation should also provide sensible
+pre-defined domain objects. If there is only one obvious implementation,
+the domain object should have the same name as the domain parser, if
+possible.
+
+There are a number of standard domain parsers and pre-defined domain
+objects that every conforming implementation must provide. These are
+discussed in STANDARD DATATYPES.
 
 Library implementations must allow users of the API to provide custom
 datatypes for flexibility.
@@ -146,11 +148,11 @@ Database values have domain dependent internal representation. For
 example, String values might be implemented by contiguous memory
 sequences, and Int values by machine integers. But the representation
 must not be parameterizable: it must be the same for all domain objects
-returned from the same parser. The rationale for this is that it should
-be possible to efficiently "cast" values from distinct domains created
-by the same parser to a most general version and to apply generic
-functions to them. In the case of a datatype with string representation,
-examples are comparison or concatenation functions.
+returned from the same domain parser. The rationale for this is that it
+should be possible to efficiently "cast" values from distinct domains
+created by the same parser to a most general version and to apply
+generic functions to them. In the case of a datatype with string
+representation, examples are comparison or concatenation functions.
 
 RECOMMENDED DOMAIN PARSER PARAMETERIZATION SYNTAX
 -------------------------------------------------
@@ -159,13 +161,15 @@ The parameterization syntax should if possible follow the style
 
 % DOMAIN Foo Bar arg1 arg2 opt1=foo opt2=bar
 
-That is, space separated words, where each word is a lowercase
-identifier optionally followed by an equal sign and a user-chosen
-argument with suitable syntax (preferably printable ASCII).
+I.e. space separated words, where each word is a lowercase identifier
+optionally followed by an equal sign and a user-chosen argument with
+suitable syntax (preferably printable ASCII).
 
 UNIQUE KEY CONSTRAINTS
 ----------------------
+
 Example:
+
 % TABLE Person PersonId Comment
 % KEY UniquePersonId Person P *
 
@@ -205,6 +209,7 @@ is invalid since each variable can be used only once on each side. This
 
 declares a multi-column foreign key constraint from Perm to Repo.
 
+
 STANDARD DATATYPES
 ==================
 
@@ -226,6 +231,8 @@ Parameterization:
 The value ordering is the lexical ordering of the bytes that make up the
 UTF-8 encoded ID.
 
+An unparameterized ID domain object must be pre-defined with name "ID".
+
 String
 ------
 
@@ -246,6 +253,9 @@ For value constraints, pattern matchers might be added in the future,
 for example one for email addresses or one matching user-specified
 regular expressions.
 
+An unparameterized String domain object must be pre-defined with name
+"String".
+
 Int
 ---
 
@@ -253,18 +263,14 @@ Machine type signed integer. This has the same lexical representation
 and interpretation as in C. An error should be thrown by the parser if a
 lexem can't be represented on the executing machine.
 
+An unparameterized Int domain object must be available with name "Int".
+
 Enum
 ----
 
 Simple enumeration type. Parameterization is the space separated list of
 identifiers that are part of the enumeration. The ordering of these
 values is the order in the declaration.
-
-Bool
-----
-
-Boolean type. No parameterization is defined; the true and false values
-are represented by literal "true" and "false" (without quotes).
 
 Decimal
 -------
@@ -292,6 +298,7 @@ a precision indicated.
 No digits are allowed right next to a bracket.
 
 The obvious ordering rules apply.
+
 
 DATABASE TUPLES
 ===============
