@@ -33,13 +33,13 @@ Country ARM AM [Armenia]
 
 <p>WSL is a clean and practical plain text format for <a
 href="https://en.wikipedia.org/wiki/Relational_model">relational data</a>. It
-consists of a schema language and a notation for typed database tuples with
+comprises a schema language and a notation for typed database tuples with
 schema-supported lexical syntax.</p>
 
-<p>It is accessible to format-agnostic text utilities like grep / sed / awk , as
-well as to spezialized tools that understand the format and can take advantage
-of the schema information. Thanks to its simplicity it is also very amenable for
-tooling &mdash; for example logical or hierarchial query languages.</p>
+<p>It is accessible to format-agnostic text utilities like grep/sed/awk as well
+as to spezialized tools that understand the format and can take advantage of the
+schema information. Due to its simplicity it is also amenable for tooling
+&mdash; for example logical or hierarchial query languages.</p>
 
 <div style="clear: both"></div>
 
@@ -55,23 +55,15 @@ tooling &mdash; for example logical or hierarchial query languages.</p>
 
 <p>A <a href="https://github.com/jstimpfle/python-wsl/">python library</a>.</p>
 
-<p>A <a href="https://github.com/jstimpfle/relational-calculus">proof-of-concept
-implementation</a> of a query processor for a friendly logic query language,
-supported from the command-line.</p>
-
-<p>A fast <i>C library</i> is in the planning.</p>
-
 <h2>Practical advantages</h2>
 
 <ul>
-<li>Textual storage: version control, editing with the editor of your
-choice, reliable and convenient data exchange, good scriptability.</li>
-<li>Domain-specific and user-defined lexers: minimal syntactic overhead (better
-readability, scriptability, canonic representation</li>
-<li>Schema support: check data integrity, build tooling and query
-languages.</li>
-<li>Use the python3 implementation (more to come) to parse or format runtime
-objects from/to text files or streams, in a single line of code.</li>
+<li>Textual storage: scriptability, version control, simple and robust data exchange</li>
+<li>Domain-specific and user-defined lexers: low syntactic overhead, canonic
+representation</li>
+<li>Schema support: data integrity, build tooling and query languages.</li>
+<li>Convenience: Use the python3 implementation (more to come) to parse or
+format runtime objects from/to text in a single line of code.</li>
 </ul>
 
 <h2>Relational model</h2>
@@ -102,22 +94,20 @@ restricted version of first order logic, where each table in the schema is a
 predicate, and each database table is a universe where each predicate is true if
 and only if the corresponding database tuple exists in the table.</p>
 
-<h2>WSL compared to JSON / S-Expressions / XML ...</h2>
+<h2>WSL compared to JSON / XML / S-Expressions ...</h2>
 
 <p>WSL is a notation for <i>relational data</i> (flat tables). It does not
 directly serialize hierarchical data like JSON. However, much hierarchical data
 found in practice would better be represented as relational data. (See
 "Relational model").</p>
 
-<p>JSON lacks a standardized schema language, and as a consequence it can't
-provide a lexical syntax that is both convenient and canonical ("pick one") and
-can't support data integrity. It also has only few basic available datatypes. So
-all in all JSON does not offer much support for data modelling. Its success came
-mostly from mapping easily to the basic built-in types of most dynamic
-languages.</p>
+<p>JSON lacks a schema language, and as a consequence it can't provide a lexical
+syntax that is both convenient and canonical ("pick one") and can't support data
+integrity. It also has only few available datatypes. In conclusion, it doesn't
+offer much support for data modelling. Its success came mostly from mapping
+easily to the basic built-in types of most dynamic languages.</p>
 
-<p>S-Expressions are somewhat similar to JSON. But they are even less widely
-supported and I'm not aware of standardized integrity schemes.</p>
+<p>S-Expressions are somewhat similar to JSON, but less widely used.</p>
 
 <p>The situation is different with XML / DTD / XSLT, which do provide support
 for well-formedness beyond syntax. But they are syntactically and conceptually
@@ -134,6 +124,7 @@ WSL offers</p>
 <li>Contains database (schema + many tables) instead of only one table
 <li>Primitive types; built-in and extendable types (CSV has only strings)
 <li>Per-type lexical syntax: more readable, editable, scriptable
+<li>Non-broken quoting rules.
 <li>Better Integrity: primitive types, unique and foreign keys
 </ul>
 
