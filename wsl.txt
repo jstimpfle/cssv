@@ -238,10 +238,12 @@ String
 
 Strings are arbitrary UTF-8 encoded text, but typically hold a short
 sequence of words. Without parameterization, they are encoded as
-literals between square brackets in [this style] without any escaping.
+literals between square brackets in [this style] without any escaping
+defined. In this mode it's not possible to encode any of the characters
+[, \, and ] (0x5b - 0x5d).
 
-If the "escape" keyword appears in the parameterization, the following
-backslash escape sequences are recognized:
+If the parameterization string contains the keyword "escape", the
+following backslash escape sequences are recognized:
 
  - \xHH Hexadecimal byte (lower case, 0x0a but not 0x0A).
  - \uDDDD Four-digit Unicode code point (with leading zeroes).
